@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly NCN PITR base backup
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00 UTC
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

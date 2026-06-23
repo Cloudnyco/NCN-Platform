@@ -1,0 +1,16 @@
+[Unit]
+Description=NCN Core Console API socket (zero-downtime deploys)
+# NOTE: deliberately NO `PartOf=ncn-api.service`. PartOf would propagate the
+# service's restart to this socket, tearing the listener down mid-swap and
+# defeating the whole point (measured: 6 connection-refused across 2 restarts
+# with PartOf set, 0 without). The socket lives independently of the service.
+
+[Socket]
+# systemd owns this listening socket independently of the service process.
+# On `systemctl restart ncn-api`, the socket stays bound, so connections
+# that arrive during the ~100-300ms binary swap queue in the kernel backlog
+# instead of getting connection-refused — nginx never sees a 502.
+ListenStream=127.0.0.1:9000
+
+[Install]
+WantedBy=sockets.target

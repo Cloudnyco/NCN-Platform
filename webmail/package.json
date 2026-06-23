@@ -1,0 +1,28 @@
+{
+  "name": "ncn-webmail",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "NCN Webmail — standalone client for mail.example.com (decoupled from example.com SPA)",
+  "scripts": {
+    "dev": "vite",
+    "lint:i18n": "node scripts/lint-i18n.mjs",
+    "prebuild": "npm run lint:i18n && npm run typecheck",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-i18n": "^9.14.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vue-tsc": "^2.1.10"
+  }
+}

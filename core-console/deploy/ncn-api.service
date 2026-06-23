@@ -1,0 +1,51 @@
+[Unit]
+Description=NCN Core Console API (Go telemetry bridge)
+After=network-online.target ncn-api.socket
+Wants=network-online.target
+# Zero-downtime deploys: systemd holds the listening socket (ncn-api.socket)
+# across restarts; the service inherits it as fd 3 (apiListener() in main.go).
+Requires=ncn-api.socket
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ncn-core-console/backend
+ExecStart=/opt/ncn-core-console/backend/ncn-api -addr=127.0.0.1:9000
+
+# Telegram notifier credentials. The leading `-` makes the file optional —
+# absent file does NOT fail the unit; the notifier just stays disabled.
+# DO NOT REMOVE: bot_tg.go reads NCN_TG_BOT_TOKEN + NCN_TG_CHAT_ID via this.
+# (Lost once in commit 038bd53 when this unit was rewritten — the hand-
+#  edited live copy on tyo had the line but the git-tracked copy didn't.)
+EnvironmentFile=-/etc/ncn-core-console/tg.env
+# OAuth/OIDC client creds (Google/Microsoft/GitHub) — see deploy/oauth.env.example.
+# Leading `-` = optional: absent file → those providers gracefully disabled.
+EnvironmentFile=-/etc/ncn-core-console/oauth.env
+
+# systemctl reload ncn-api → SIGHUP → fleet.ReloadAgentKeys().
+# Use this after agent-node-provision.sh rotates a PoP's HMAC key,
+# instead of `systemctl restart` (which causes a brief 401 window for
+# every other PoP during the bounce).
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=on-failure
+RestartSec=2s
+
+# Logs go to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ncn-api
+
+# Hardening (kept light because we need to exec system probes via sudo)
+NoNewPrivileges=false
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+# Auth secrets / operator config — systemd auto-creates /etc/ncn-core-console
+# with mode 0700 before the service starts, and treats it as ReadWrite.
+ConfigurationDirectory=ncn-core-console
+ConfigurationDirectoryMode=0700
+
+[Install]
+WantedBy=multi-user.target

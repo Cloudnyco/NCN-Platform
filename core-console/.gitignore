@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+*.local
+
+# Go build artifacts
+backend/ncn-api
+backend/*.test
+wiki/public/site/
+wiki/internal/site/
+__pycache__/

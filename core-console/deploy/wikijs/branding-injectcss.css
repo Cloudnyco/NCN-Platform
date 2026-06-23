@@ -1,0 +1,26 @@
+/* Wiki.js theming.injectCSS — set into the `theming` row of the wikijs DB
+ * (value is `json`, not jsonb → write via pg_read_file(...)::json + restart
+ * ncn-wikijs). darkMode=true + a teal anycast-glyph SVG favicon live in the
+ * same theming setting (favicon via injectHead).
+ *
+ * NOTE: do NOT inject a header logo via `.nav-header-inner::before` — it
+ * misaligned the top toolbar (stray glyphs + shifted layout). For a real header
+ * logo, upload it in Admin → General → Site Logo (proper <img>, no layout hack).
+ *
+ * These rules only fix CONTENT: the imported ops handbook is dense with wide
+ * tables, ASCII <pre> diagrams, and long code/URLs/IPv6 — make them scroll/wrap
+ * instead of blowing out the (mobile) viewport.
+ */
+.contents { overflow-wrap: break-word; word-break: break-word; max-width: 100%; }
+.contents table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.contents pre { overflow-x: auto; max-width: 100%; }
+.contents pre code { white-space: pre; }
+.contents img { max-width: 100%; height: auto; }
+
+@media (max-width: 600px) {
+  .contents { font-size: 15px; }
+  .contents pre, .contents pre code { font-size: 11.5px; line-height: 1.45; }
+  .contents h1 { font-size: 1.5rem; }
+  .contents h2 { font-size: 1.2rem; }
+  .contents table { font-size: 13px; }
+}

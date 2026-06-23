@@ -1,0 +1,7 @@
+# geofeed — RFC 8805. last-updated: 2026-05-30
+2001:db8:51::/48,HK,,Region C,
+2001:db8:52::/48,US,US-CA,Fremont,
+2001:db8:53::/48,JP,JP-13,Region A,
+2001:db8:54::/48,SG,,Region D,
+2001:db8:55::/48,DE,DE-HE,Region B am Main,
+# 2001:db8:50::/48 omitted (anycast)

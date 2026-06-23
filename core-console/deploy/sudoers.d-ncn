@@ -1,0 +1,11 @@
+# /etc/sudoers.d/ncn  —  install with `visudo -f /etc/sudoers.d/ncn`
+#
+# Lets the Go API exec the read-only network probes without a password.
+# Even though ncn-api currently runs as root (sudo is a no-op), this file
+# documents the privilege surface and is required if you ever drop the
+# service to a non-root user.
+#
+# Lock down to the exact argument vectors — wildcards intentionally avoided.
+
+root ALL=(root) NOPASSWD: /usr/sbin/birdc show protocols, /usr/bin/wg show
+# noc  ALL=(root) NOPASSWD: /usr/sbin/birdc show protocols, /usr/bin/wg show

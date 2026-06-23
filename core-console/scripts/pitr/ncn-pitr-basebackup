@@ -1,0 +1,68 @@
+#!/bin/bash
+# ncn-pitr-basebackup — PITR baseline (deployed to pop-03 as
+# /usr/local/bin/ncn-pitr-basebackup, fired weekly by ncn-pitr-basebackup.timer).
+# Takes a frozen base backup of the ctrl-01 primary over the backbone replication
+# connection into the offsite archive on pop-03's roomy sdb. PITR procedure =
+# restore the newest base OLDER than the recovery-target time, drop a
+# recovery.signal with restore_command, set recovery_target_time, start PG.
+#
+# Runs ON pop-03 (space + already streams from ctrl-01), NOT on ctrl-01's tight
+# root disk. Retention: keep the newest $KEEP bases; prune older bases AND the
+# WAL segments that predate the oldest kept base's START WAL.
+set -uo pipefail
+ARCH=/var/mail/vhosts/ncn-ha/wal-archive
+BASE="$ARCH/base"
+WAL="$ARCH/wal"
+KEEP=2
+PRIMARY=2001:db8:53::1
+TS=$(date -u +%Y%m%d-%H%M%S)
+DEST="$BASE/base-$TS"
+log(){ echo "[ncn-pitr-basebackup] $*"; }
+
+install -d -o postgres -g postgres -m 750 "$DEST"
+# .pgpass (postgres home) already holds the replicator creds from streaming-repl setup.
+if sudo -u postgres pg_basebackup -h "$PRIMARY" -U replicator -D "$DEST" \
+     -Ft -z -Xnone -c fast -P 2>&1; then
+  log "base backup ok -> $DEST ($(du -sh "$DEST" | cut -f1))"
+else
+  log "base backup FAILED -> removing partial $DEST"; rm -rf "$DEST"; exit 1
+fi
+
+# retention: keep newest $KEEP bases (sorted newest-first)
+mapfile -t bases < <(ls -1dt "$BASE"/base-* 2>/dev/null)
+if [ "${#bases[@]}" -gt "$KEEP" ]; then
+  for old in "${bases[@]:$KEEP}"; do log "pruning old base $old"; rm -rf "$old"; done
+  mapfile -t bases < <(ls -1dt "$BASE"/base-* 2>/dev/null)
+fi
+
+# prune WAL older than the oldest KEPT base's START WAL (precise, from backup_label)
+oldest="${bases[$(( ${#bases[@]} - 1 ))]:-}"
+if [ -n "$oldest" ] && [ -f "$oldest/base.tar.gz" ]; then
+  startwal=$(tar -xzOf "$oldest/base.tar.gz" backup_label 2>/dev/null \
+              | awk '/START WAL LOCATION/{print $NF}' | tr -d '()')
+  if [ -n "$startwal" ]; then
+    log "oldest kept base $oldest needs WAL from $startwal; pruning older segments"
+    pruned=0
+    for f in "$WAL"/*.gz; do
+      [ -e "$f" ] || continue
+      b=$(basename "$f" .gz)
+      case "$b" in *.history|*.backup) continue;; esac
+      if [[ "$b" < "$startwal" ]]; then rm -f "$f"; pruned=$((pruned+1)); fi
+    done
+    log "pruned $pruned stale WAL segment(s)"
+  fi
+fi
+log "done; bases on disk: ${#bases[@]}, wal segments: $(ls -1 "$WAL"/*.gz 2>/dev/null | wc -l)"
+
+# Expose freshness to Prometheus via the local textfile (served by nginx on
+# 127.0.0.1:9101). Lets Grafana graph "time since last base backup" + alert if
+# the weekly job silently stops. Best-effort; never fails the backup.
+TEXTFILE=/var/mail/vhosts/ncn-mon/pitr.prom
+{
+  echo '# HELP ncn_pitr_last_basebackup_timestamp_seconds Unix time of the last successful PITR base backup'
+  echo '# TYPE ncn_pitr_last_basebackup_timestamp_seconds gauge'
+  echo "ncn_pitr_last_basebackup_timestamp_seconds $(date -u +%s)"
+  echo '# HELP ncn_pitr_bases_count Base backups currently retained'
+  echo '# TYPE ncn_pitr_bases_count gauge'
+  echo "ncn_pitr_bases_count ${#bases[@]}"
+} > "$TEXTFILE.tmp" 2>/dev/null && mv -f "$TEXTFILE.tmp" "$TEXTFILE" && chmod 644 "$TEXTFILE" || true

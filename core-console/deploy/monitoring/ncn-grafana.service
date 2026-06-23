@@ -1,0 +1,37 @@
+[Unit]
+Description=NCN Grafana (dashboards, on pop-03 sdb, localhost-only)
+After=network-online.target ncn-prometheus.service
+Wants=network-online.target
+
+[Service]
+User=ncnmon
+Group=ncnmon
+WorkingDirectory=/var/mail/vhosts/ncn-mon/grafana
+# All state on sdb; bind localhost only (reach via SSH tunnel, like Gatus :8080).
+Environment=GF_PATHS_DATA=/var/mail/vhosts/ncn-mon/grafana-data
+Environment=GF_PATHS_LOGS=/var/mail/vhosts/ncn-mon/grafana-data/log
+Environment=GF_PATHS_PLUGINS=/var/mail/vhosts/ncn-mon/grafana-data/plugins
+Environment=GF_PATHS_PROVISIONING=/var/mail/vhosts/ncn-mon/grafana/conf/provisioning
+Environment=GF_SERVER_HTTP_ADDR=127.0.0.1
+Environment=GF_SERVER_HTTP_PORT=3000
+Environment=GF_ANALYTICS_REPORTING_ENABLED=false
+Environment=GF_ANALYTICS_CHECK_FOR_UPDATES=false
+Environment=GF_USERS_ALLOW_SIGN_UP=false
+# Embedded in the console at admin.example.com/grafana via ncn-api's admin-gated
+# reverse proxy. Served from a sub-path; anonymous Viewer so operators don't hit
+# a second login (Grafana stays localhost-only, reached only through the gated
+# proxy + tunnel, so anonymous-read is safe); embedding allowed for the iframe.
+Environment=GF_SERVER_ROOT_URL=https://admin.example.com/grafana/
+Environment=GF_SERVER_SERVE_FROM_SUB_PATH=true
+Environment=GF_AUTH_ANONYMOUS_ENABLED=true
+Environment=GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+Environment=GF_SECURITY_ALLOW_EMBEDDING=true
+ExecStart=/var/mail/vhosts/ncn-mon/grafana/bin/grafana server \
+  --homepath=/var/mail/vhosts/ncn-mon/grafana \
+  --config=/var/mail/vhosts/ncn-mon/grafana/conf/defaults.ini
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

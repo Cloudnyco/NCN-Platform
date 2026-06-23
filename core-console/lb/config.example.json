@@ -1,0 +1,12 @@
+{
+  "mode": "observe",
+  "interval_secs": 10,
+  "unhealthy_threshold": 3,
+  "healthy_threshold": 2,
+  "failover_script": "/etc/ncn-lb/failover.sh",
+  "status_addr": ":8090",
+  "origins": [
+    { "name": "ctrl-01", "url": "https://[2001:db8:53::1]/api/v1/health", "alt_url": "https://198.51.100.1/api/v1/health", "host": "admin.example.com", "priority": 1 },
+    { "name": "pop-03", "url": "https://[2001:db8:51::1]/api/v1/health", "alt_url": "https://198.51.100.3/api/v1/health", "host": "admin.example.com", "priority": 2 }
+  ]
+}

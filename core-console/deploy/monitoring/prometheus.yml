@@ -1,0 +1,38 @@
+# Prometheus scrape config for the NCN control plane. Deployed on pop-03 (the
+# observability host — survives a ctrl-01 death, has space on sdb). Scrapes the
+# ncn-api /metrics endpoint on the ctrl-01 PRIMARY over the private v6 backbone
+# (nginx location = /metrics is restricted to 2001:db8:50::/44). TLS is by IP so
+# the cert won't match the vhost — insecure_skip_verify is fine on the backbone.
+#
+# When failover promotes pop-03, point this at the new primary (or add both
+# targets; the warm standby's ncn-api is stopped so it just shows down until
+# promoted). Lives at /var/mail/vhosts/ncn-ha/prometheus/prometheus.yml.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    monitor: ncn-pop-03
+
+scrape_configs:
+  - job_name: ncn-api
+    scheme: https
+    metrics_path: /metrics
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['[2001:db8:53::1]:443']
+        labels:
+          node: ctrl-01
+          role: primary
+
+  # Prometheus' own health.
+  - job_name: prometheus
+    static_configs:
+      - targets: ['127.0.0.1:9090']
+
+  # PITR base-backup freshness — a textfile the weekly basebackup writes,
+  # served locally by nginx (ncn-textfile.nginx.conf). Down between the file's
+  # first write; that's fine.
+  - job_name: pitr
+    static_configs:
+      - targets: ['127.0.0.1:9102']

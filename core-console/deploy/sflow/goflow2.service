@@ -1,0 +1,19 @@
+[Unit]
+Description=goflow2 flow collector -> JSONL for ncn-api Traffic analytics
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Default listen covers netflow://:2055 (softflowd) + sflow://:6343. Writes one
+# JSON object per flow to the tmpfs JSONL that ncn-api tails (NCN_FLOW_FILE).
+ExecStart=/usr/local/bin/goflow2 -format json -transport.file /var/log/ncn-flows/flows.jsonl
+Restart=on-failure
+RestartSec=5
+User=nobody
+Group=nogroup
+MemoryMax=256M
+OOMScoreAdjust=600
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

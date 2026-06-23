@@ -1,0 +1,64 @@
+# =============================================================================
+# /root/ncn-workspace/.gitignore  —  workspace-wide ignores
+# =============================================================================
+# This is a monorepo for two products that are deployed independently:
+#
+#   core-console/   admin.example.com (ncn-api on deploy-host)
+#   webmail/        mail.example.com  (ncn-mail on pop-03)
+#
+# Both ship via deploy/deploy.sh inside their own directory. The top-level
+# deploy-all.sh chains them.
+#
+# Patterns below use **/ leading-globs so they apply at any depth — covers
+# both projects without per-project duplicate .gitignores.
+
+# ── Node / Vite frontend artifacts ──────────────────────────────────────────
+**/node_modules/
+**/dist/
+**/.vite/
+**/build/
+
+# ── Go build artifacts ──────────────────────────────────────────────────────
+**/backend/ncn-api
+**/backend/ncn-mail
+**/backend/*.test
+**/backend/__debug_bin*
+
+# ── Editor / OS noise ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.tmp
+
+# ── Local environment / secrets ────────────────────────────────────────────
+# Real secrets live in /etc/ncn-*/, never in the workspace. These rules
+# defend against accidental dotenv-style files that might appear during dev.
+**/.env
+**/.env.*
+*.local
+**/secret*.local
+**/*.key.local
+
+# ── Claude Code per-project memory + settings ──────────────────────────────
+# This directory contains conversation memory, slash-command snippets, and
+# user preferences. Not part of the deployable product — keep out of the
+# repo so it doesn't leak between machines.
+**/.claude/
+
+# ── Logs / temp ────────────────────────────────────────────────────────────
+*.log
+**/tmp/
+
+# ── Local backups / compiled CLI binaries ──────────────────────────────────
+# backups/ holds ad-hoc tar+age snapshots from scripts/backup-secrets.sh.
+# Each clone snapshots its own state; the .tar.gz form has no value to
+# other machines (and we don't want encrypted blobs in git either).
+backups/
+**/*.tar.gz
+
+# cli/ncn-login/ncn-login is the compiled login CLI (ARM64 ELF on this
+# box, x86 elsewhere). Source lives in cli/ncn-login/*.go; the binary
+# itself is a per-machine build artifact, not source-of-truth.
+cli/ncn-login/ncn-login

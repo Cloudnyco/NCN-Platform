@@ -1,0 +1,36 @@
+site_name: Acme Net
+site_url: https://wiki.example.com/
+site_description: AS64500 — anycast network, peering, and looking glass docs.
+copyright: © Acme Net · AS64500
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: teal
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - 首页: index.md
+  - 网络: network.md
+  - 互联 (Peering): peering.md
+  - Looking Glass: looking-glass.md
+  - 状态与事件: status.md

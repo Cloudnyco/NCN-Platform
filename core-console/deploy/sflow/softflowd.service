@@ -1,0 +1,14 @@
+[Unit]
+Description=softflowd NetFlow exporter -> goflow2 collector (ctrl-01 backbone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# -d = foreground (for systemd). -i = capture iface (default route iface).
+# -n [v6]:2055 = goflow2 on ctrl-01 backbone anchor. -s 1000 = 1:1000 sampling.
+ExecStart=/usr/sbin/softflowd -d -i eth0 -n [2001:db8:53::1]:2055 -v 9 -s 1000 -t expint=30 -t maxlife=120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

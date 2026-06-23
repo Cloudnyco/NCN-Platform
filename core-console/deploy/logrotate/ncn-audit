@@ -1,0 +1,24 @@
+# /etc/logrotate.d/ncn-audit — rotate the security audit log (audit.go).
+#
+# ncn-api appends with O_APPEND and does NOT reopen on a signal, so we use
+# `copytruncate`: logrotate copies the file to .1 then truncates the live
+# inode in place — the app's open fd keeps writing to the same (now empty)
+# inode, no app restart/reopen needed. The audit log is kept append-only
+# (chattr +a) for tamper-resistance; chattr refuses to truncate an +a file,
+# so prerotate drops the flag and postrotate restores it around the rotate.
+/var/log/ncn-audit/audit.jsonl {
+    daily
+    rotate 365
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+    prerotate
+        /usr/bin/chattr -a /var/log/ncn-audit/audit.jsonl 2>/dev/null || true
+    endscript
+    postrotate
+        /usr/bin/chattr +a /var/log/ncn-audit/audit.jsonl 2>/dev/null || true
+    endscript
+}

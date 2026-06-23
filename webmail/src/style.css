@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Outfit — matches the wordmark in logo.svg. Self-hosted to keep CSP tight. */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/outfit-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/outfit-700.woff2') format('woff2');
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+  font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* dark scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #1f2937; }
+::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+/* ─────────────── Vue <Transition> animations ─────────────── */
+
+/* Modal: backdrop fades + inner card scales/slides.
+   On mobile (<640px) the card slides UP from the bottom instead of scaling,
+   matching the bottom-sheet layout. */
+.modal-enter-active, .modal-leave-active {
+  transition: opacity 200ms ease-out;
+}
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+
+.modal-enter-active .modal-card,
+.modal-leave-active .modal-card {
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 200ms ease-out;
+}
+.modal-enter-from .modal-card,
+.modal-leave-to   .modal-card {
+  transform: scale(0.96) translateY(12px);
+  opacity: 0;
+}
+@media (max-width: 640px) {
+  .modal-enter-from .modal-card,
+  .modal-leave-to   .modal-card {
+    transform: translateY(100%);
+    opacity: 1;
+  }
+  /* On mobile, leave is a bit slower so the sheet visibly tucks away. */
+  .modal-leave-active .modal-card {
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.6, 1);
+  }
+}
+
+/* Dropdown: small fade + tiny slide (no scale — feels lighter for menus). */
+.dropdown-enter-active, .dropdown-leave-active {
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+.dropdown-enter-from, .dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* (removed: dead .list-* TransitionGroup CSS — the TransitionGroup was pulled
+   long ago for the invisible-mail-list bug; and dead .reader-* cross-fade —
+   no `name="reader"` Transition exists. Both were unused.) */
+
+/* Status banner (errMsg) — slide down from the header. */
+.banner-enter-active, .banner-leave-active {
+  transition: opacity 180ms ease-out, transform 180ms ease-out, max-height 220ms ease-out;
+  overflow: hidden;
+}
+.banner-enter-from, .banner-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+  max-height: 0;
+}
+.banner-enter-to, .banner-leave-from {
+  max-height: 60px;
+}
+
+/* Touch target floor: minimum 36px hit-area on mobile for any interactive
+   element that doesn't otherwise reach it. Vue components opt in by adding
+   class="touch-target". */
+@media (max-width: 640px) {
+  .touch-target {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+
+/* iOS Mobile Safari auto-zooms when focusing an input/textarea whose
+   computed font-size is below 16px. That makes the dense Compose modal
+   un-usable on iPhone — the whole layout reflows on every focus event.
+   Force a 16px floor at the mobile breakpoint, but ONLY for the input
+   surface visible to the user; Tailwind's `text-xs` still controls
+   surrounding labels. The `-webkit-text-size-adjust: 100%` belt+suspenders
+   stops the WebKit "ergonomic" zoom on first focus too. */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+html { -webkit-text-size-adjust: 100%; }
+
+/* ─────────────── Mobile single-pane slide-in (pure CSS) ───────────────
+ * On mobile (<md) the folders / list / reader panes are toggled by Tailwind
+ * `hidden` (display:none). Going display:none → block RESTARTS an element's
+ * CSS animations, so a keyframe on each pane fires every time it becomes the
+ * active view — no Vue <Transition> needed (and none of its stuck-at-start
+ * failure modes; see the route-anim lessons).
+ *
+ * Rules followed deliberately:
+ *   · transform-ONLY — never opacity 0→1, so a skipped paint is at worst a
+ *     small offset, never an invisible pane.
+ *   · no animation-fill-mode → element settles to its natural state.
+ *   · reader slides in from the right (opening a message = a forward "push");
+ *     folders + list "materialize" (translateY + slight scale) — direction-
+ *     neutral so back-navigation never feels like it moved the wrong way.
+ *   · Apple decel curve; desktop (md+ grid, all panes always visible) is
+ *     untouched because the whole block is gated to the mobile breakpoint.
+ */
+@media (max-width: 767px) {
+  .mob-pane {
+    animation: paneMaterialize 460ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform-origin: top center;
+  }
+  .mob-pane-reader {
+    animation: paneInRight 440ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+@keyframes paneMaterialize {
+  from { transform: translateY(16px) scale(0.985); }
+  to   { transform: none; }
+}
+@keyframes paneInRight {
+  from { transform: translateX(42px) scale(0.99); }
+  to   { transform: none; }
+}
+
+/* Respect users who don't want motion. Per-class list kept for clarity, plus
+   a global W3C-recommended reset below so any present-or-future animation is
+   covered without having to remember to enumerate it here. */
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active, .modal-leave-active,
+  .modal-enter-active .modal-card, .modal-leave-active .modal-card,
+  .dropdown-enter-active, .dropdown-leave-active,
+  .banner-enter-active, .banner-leave-active {
+    transition: none !important;
+  }
+  .mob-pane, .mob-pane-reader { animation: none !important; }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+ * Cloudflare Turnstile · floats below the login card
+ * ============================================================================
+ * The widget's iframe is a fixed 300×65 (size:'normal'). Sits OUTSIDE the
+ * gray-950 login card so its CF chrome reads as a separate "third-party
+ * verification step" rather than fighting the form layout. CSS scales the
+ * widget down on viewports narrower than 360 / 320px so it never causes
+ * horizontal overflow on small phones. (Same rules as admin console.)
+ */
+.ncn-turnstile-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+}
+.ncn-turnstile-shell .ncn-turnstile {
+  width: 300px;
+  max-width: 100%;
+}
+.ncn-turnstile-shell .ncn-turnstile iframe {
+  display: block;
+  border: 0;
+}
+@media (max-width: 360px) {
+  .ncn-turnstile-shell .ncn-turnstile {
+    transform: scale(0.9);
+    transform-origin: top center;
+    margin-bottom: -6px;
+  }
+}
+@media (max-width: 320px) {
+  .ncn-turnstile-shell .ncn-turnstile {
+    transform: scale(0.82);
+    margin-bottom: -12px;
+  }
+}

@@ -1,0 +1,13 @@
+#!/bin/bash
+# ncn-wal-restore %f %p — PostgreSQL restore_command for PITR recovery (deployed
+# to the recovery host as /usr/local/bin/ncn-wal-restore). Pulls an archived WAL
+# segment back from pop-03 and decompresses it. Exits non-zero when a segment
+# isn't archived (PG reads that as end-of-archive). On pop-03 itself you can skip
+# this and read the archive dir directly:
+#   restore_command = 'gunzip -c /var/mail/vhosts/ncn-ha/wal-archive/wal/%f.gz > %p'
+set -uo pipefail
+name="$1"; dest="$2"
+HKG=2001:db8:51::1
+KEY=/var/lib/postgresql/.ssh/id_ed25519
+ssh -i "$KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+  root@"$HKG" "get ${name}.gz" | gunzip > "$dest"

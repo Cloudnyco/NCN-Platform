@@ -1,0 +1,34 @@
+[Unit]
+Description=NCN Webmail API
+After=network-online.target dovecot.service postfix.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/ncn-mail/ncn-mail -addr=127.0.0.1:9000
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=true
+ProtectSystem=strict
+# /etc/ncn-mail    — our state (session.key, invites.json, mail-creds.json,
+#                    vmailbox, sender-login + their .db indexes)
+# /etc/dovecot     — appending new lines into /etc/dovecot/users
+# /var/mail/vhosts — maildir creation when provisioning new accounts
+# /var/lib/dovecot — `doveadm reload` writes to its run state here
+ReadWritePaths=/etc/ncn-mail /etc/dovecot /var/mail/vhosts /var/lib/dovecot
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+# AF_NETLINK is required so child processes (postmap, doveadm) can run
+# getifaddrs() and similar — postfix's own libraries enumerate interfaces
+# at every invocation.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+LockPersonality=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

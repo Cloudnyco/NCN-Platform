@@ -1,0 +1,12 @@
+# ncn-api — build + run. Build context: repo backend/ directory.
+FROM golang:1.24-alpine AS build
+WORKDIR /src
+COPY . .
+RUN go mod download && CGO_ENABLED=0 go build -trimpath -o /ncn-api .
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=build /ncn-api /ncn-api
+EXPOSE 9000
+# Migrations auto-apply on start. NCN_DATABASE_URL (compose) → Postgres;
+# omit it to run file-backed. Fleet/secrets absent in-container = reduced features.
+ENTRYPOINT ["/ncn-api", "-addr=0.0.0.0:9000"]

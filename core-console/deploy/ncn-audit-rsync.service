@@ -1,0 +1,27 @@
+[Unit]
+Description=NCN audit log offsite mirror (ctrl-01 → pop-04)
+Documentation=https://github.com/your-org/your-repo/tree/main/core-console/scripts/audit-rsync-offsite.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ncn-core-console/scripts/audit-rsync-offsite.sh
+
+# Logs go to journald — `journalctl -u ncn-audit-rsync` for the last run.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ncn-audit-rsync
+
+# Hardening: this only needs read access to /var/log/ncn-audit and the
+# fleet-key for outbound ssh. No writes to /etc, /usr, /home etc.
+ProtectSystem=strict
+ReadOnlyPaths=/var/log/ncn-audit
+ReadWritePaths=/tmp
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Timeout — if pop-04 is unreachable, don't hang the system forever.
+# 5 min is enough for a few GB even on a slow link.
+TimeoutStartSec=300

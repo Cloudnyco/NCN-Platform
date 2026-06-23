@@ -1,0 +1,10 @@
+{
+  "name": "ncn-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing NCN fleet ops tools to Claude Code (proxies the ncn-api agent-tool bridge).",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

@@ -1,0 +1,28 @@
+[Unit]
+Description=NCN core-console state snapshot (local + offsite to pop-04)
+Documentation=https://github.com/your-org/your-repo/tree/main/core-console/scripts/state-backup.sh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ncn-core-console/scripts/state-backup.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ncn-state-backup
+
+# Reads the live state under /etc/ncn-core-console (incl. the fleet-key for the
+# outbound offsite ssh), writes only the backup dir. Keep /etc read-only.
+ProtectSystem=strict
+ReadOnlyPaths=/etc/ncn-core-console
+# /var/backups always exists on Debian; the script mkdir's the ncn-state
+# subdir. (Naming the not-yet-existing subdir here fails systemd's namespace
+# bind-mount with 226/NAMESPACE.)
+ReadWritePaths=/var/backups
+PrivateTmp=true
+NoNewPrivileges=true
+
+# If pop-04 is unreachable the script still completes the LOCAL snapshot and
+# treats the offsite step as non-fatal; cap total runtime anyway.
+TimeoutStartSec=300

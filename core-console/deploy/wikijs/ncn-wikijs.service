@@ -1,0 +1,17 @@
+[Unit]
+Description=NCN Wiki.js (docs, on pop-03 sdb; DB on ctrl-01 primary)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ncnmon
+Group=ncnmon
+WorkingDirectory=/var/mail/vhosts/wikijs
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

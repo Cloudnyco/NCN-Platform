@@ -1,0 +1,22 @@
+[Unit]
+# ncn-lb — self-hosted CF-LB-equivalent failover controller. Runs on pop-04 so
+# it survives a ctrl-01 outage; health-checks the console origins and (in armed
+# mode) runs failover.sh to promote the PG replica + repoint Cloudflare DNS.
+# Ships in observe mode; arm only after the drill (see deploy/ README / plan).
+Description=NCN load balancer / failover controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# root: failover.sh runs `sudo -u postgres … promote`, systemctl, and ssh with
+# the root-owned fleet-key — same privilege level as ncn-api.service.
+User=root
+ExecStart=/opt/ncn-lb/ncn-lb -config=/etc/ncn-lb/config.json
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+[Unit]
+Description=Daily timer for NCN audit log offsite mirror
+Documentation=man:audit-rsync-offsite.sh(8)
+
+[Timer]
+# Fire daily at 03:00 UTC — after logrotate's nightly cron has rotated
+# the live audit.jsonl into yesterday's *.jsonl.gz (logrotate default
+# runs at ~03:00 local on most Debian installs; UTC alignment chosen so
+# the timer fires consistently across maintenance windows regardless of
+# ctrl-01's TZ).
+OnCalendar=*-*-* 03:00:00 UTC
+
+# Run on next boot if the system was off when the timer fired —
+# preserves the daily contract across reboots.
+Persistent=true
+
+# Random jitter so multiple PoPs adopting this pattern in the future
+# don't all hammer pop-04 at the same second.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

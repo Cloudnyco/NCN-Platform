@@ -1,0 +1,13 @@
+#!/bin/bash
+# ncn-wal-archive %p %f — PostgreSQL archive_command (deployed to ctrl-01 as
+# /usr/local/bin/ncn-wal-archive). gzip + stream each completed WAL segment to
+# pop-03's offsite archive via the forced-command receiver. MUST exit non-zero
+# on ANY failure so PG keeps the segment and retries — never lose WAL, never
+# silently break PITR. ctrl-01's root disk is tight, so shipping must keep up;
+# the archiver watchdog (replmon) alerts if pg_wal starts to grow.
+set -uo pipefail
+src="$1"; name="$2"
+HKG=2001:db8:51::1
+KEY=/var/lib/postgresql/.ssh/id_ed25519
+gzip -c "$src" | ssh -i "$KEY" -o BatchMode=yes -o StrictHostKeyChecking=no \
+  -o ConnectTimeout=15 -o ServerAliveInterval=5 root@"$HKG" "recv ${name}.gz"

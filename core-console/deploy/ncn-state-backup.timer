@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily timer for NCN core-console state snapshot
+
+[Timer]
+# 02:30 UTC — before the audit offsite mirror (03:00) so the two DR jobs
+# don't contend for the pop-04 link at the same second.
+OnCalendar=*-*-* 02:30:00 UTC
+# Run on next boot if the box was off when the timer should have fired.
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

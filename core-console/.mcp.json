@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ncn": {
+      "command": "node",
+      "args": ["mcp/ncn-mcp.mjs"],
+      "env": {
+        "NCN_MCP_BASE": "https://admin.example.com",
+        "NCN_MCP_TOKEN": "${NCN_MCP_TOKEN}"
+      }
+    }
+  }
+}

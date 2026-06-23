@@ -1,0 +1,20 @@
+[Unit]
+Description=NCN Prometheus (control-plane metrics, on pop-03 sdb)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ncnmon
+Group=ncnmon
+ExecStart=/var/mail/vhosts/ncn-mon/prometheus/prometheus \
+  --config.file=/var/mail/vhosts/ncn-mon/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/mail/vhosts/ncn-mon/prometheus-data \
+  --storage.tsdb.retention.time=90d \
+  --web.listen-address=127.0.0.1:9090 \
+  --web.enable-lifecycle
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

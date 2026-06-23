@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Theme bootstrap — runs synchronously before paint to prevent FOUC. -->
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem('ncn:theme') || 'auto';
+          var prefDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var r = m === 'auto' ? (prefDark ? 'dark' : 'light') : m;
+          document.documentElement.classList.add(r);
+        } catch (_) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <!-- Fonts are self-hosted (see @font-face in src/style.css). Google Fonts
+         was dropped: it cost a ~189KB CSS round trip, pulled large Noto SC/TC
+         CJK faces, and is blocked/slow in mainland China. JetBrains Mono is
+         now same-origin; CJK falls back to system fonts. Preload the primary
+         weight so first paint swaps to it fast. -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/jetbrains-mono-400.woff2" crossorigin />
+    <title>Acme Net</title>
+    <!-- Boot splash — inlined so it paints INSTANTLY, before the JS bundle is
+         even downloaded, covering the "blank/unstyled, many elements still
+         loading" window. main.ts removes it on mount (see #ncn-splash there);
+         a pure-CSS failsafe also fades it after 10s so a failed bundle can
+         never leave a permanent overlay. Colors are hardcoded to the brand
+         --g-950 / emerald (style.css isn't loaded yet at first paint), and
+         adapt to the theme the FOUC script above already set on <html>. -->
+    <style>
+      /* Industrial HUD boot screen — Arknights-inspired (ak.hypergryph.com):
+         near-black field, corner frame brackets, beveled/cut-corner container,
+         a "LOADING …… NN%" digital readout with a thin angular bar and a
+         cycling status log. Monochrome with a single emerald accent. The
+         progress is rAF-driven (script below) so it stays fluid; dismiss is a
+         snappy upward shutter wipe. Pure CSS, no image fetch. */
+      #ncn-splash {
+        position: fixed; inset: 0; z-index: 2147483647; overflow: hidden;
+        background: #03070f; color: rgb(226 232 240);
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        -webkit-font-smoothing: antialiased;
+        opacity: 1;
+        transition: opacity .6s cubic-bezier(.32,.72,0,1), transform .6s cubic-bezier(.32,.72,0,1);
+        animation: ncn-splash-failsafe .6s ease 12s forwards;
+      }
+      html.light #ncn-splash { background: #eef0f3; color: rgb(39 39 42); }
+      /* Dismiss = soft fade-out + a slight scale-up (the screen recedes) while
+         the app fades up underneath — a smooth crossfade, not a hard cut. */
+      #ncn-splash.ncn-splash--done { opacity: 0; transform: scale(1.025); pointer-events: none; }
+      /* App content materialises as the splash leaves. Resting state is fully
+         visible (opacity:1); the class is added only at dismiss, so if JS never
+         runs the app is never stuck hidden. */
+      #app.ncn-app-reveal { animation: ncn-app-in .66s cubic-bezier(.32,.72,0,1); }
+      @keyframes ncn-app-in { from { opacity: 0; transform: translateY(10px) scale(.994); } }
+      /* faint technical grid, masked to a soft vignette */
+      #ncn-splash::before {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background-image:
+          linear-gradient(rgb(148 163 184 / .05) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(148 163 184 / .05) 1px, transparent 1px);
+        background-size: 44px 44px;
+        -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 28%, transparent 80%);
+        mask-image: radial-gradient(circle at 50% 50%, #000 28%, transparent 80%);
+      }
+      /* corner frame brackets */
+      .ncn-hud > i { position: absolute; width: 18px; height: 18px; border: 1px solid rgb(16 185 129 / .55); }
+      .ncn-hud > i:nth-child(1) { top: 22px; left: 22px; border-right: 0; border-bottom: 0; }
+      .ncn-hud > i:nth-child(2) { top: 22px; right: 22px; border-left: 0; border-bottom: 0; }
+      .ncn-hud > i:nth-child(3) { bottom: 22px; left: 22px; border-right: 0; border-top: 0; }
+      .ncn-hud > i:nth-child(4) { bottom: 22px; right: 22px; border-left: 0; border-top: 0; }
+      /* edge annotations */
+      .ncn-hud__tl, .ncn-hud__tr, .ncn-hud__bl {
+        position: absolute; font-size: 9px; letter-spacing: .22em; line-height: 1.9; opacity: .6;
+      }
+      .ncn-hud__tl { top: 30px; left: 42px; }
+      .ncn-hud__tl b { color: rgb(16 185 129); font-weight: 400; }
+      .ncn-hud__tr { top: 30px; right: 42px; text-align: right; }
+      .ncn-hud__bl { bottom: 30px; left: 42px; }
+      /* center stack */
+      .ncn-splash__center {
+        position: absolute; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 30px; padding: 0 24px;
+      }
+      /* Brand mark (public/logo.svg — same asset the headers use). Fixed
+         height so there's no layout shift while it loads; a soft cyan glow to
+         match its own palette seats it on the dark field. */
+      .ncn-splash__logo {
+        height: clamp(58px, 12vw, 86px); width: auto; display: block;
+        filter: drop-shadow(0 0 20px rgb(23 218 245 / .25));
+        animation: ncn-frame-in .9s cubic-bezier(.32,.72,0,1);
+      }
+      .ncn-splash__frame {
+        padding: 16px 36px; border: 1px solid rgb(148 163 184 / .2); background: rgb(148 163 184 / .03);
+        clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+        animation: ncn-frame-in .8s cubic-bezier(.32,.72,0,1);
+      }
+      @keyframes ncn-frame-in { from { transform: translateY(10px); } }
+      .ncn-splash__name {
+        font-size: clamp(15px, 3.8vw, 22px); letter-spacing: .5em; padding-left: .5em;
+        font-weight: 600; white-space: nowrap; color: rgb(241 245 249);
+        animation: ncn-name-reveal 1.15s cubic-bezier(.32,.72,0,1);
+      }
+      html.light .ncn-splash__name { color: rgb(24 24 27); }
+      @keyframes ncn-name-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+      /* loading readout */
+      .ncn-load { display: flex; flex-direction: column; gap: 12px; width: min(440px, 84vw); }
+      .ncn-load__row { display: flex; align-items: baseline; gap: 12px; font-size: 10px; letter-spacing: .28em; }
+      .ncn-load__row .lbl { opacity: .55; }
+      .ncn-load__row .dots { flex: 1; align-self: center; border-bottom: 1px dotted rgb(148 163 184 / .3); height: 0; }
+      .ncn-load__pct { color: rgb(16 185 129); font-variant-numeric: tabular-nums; }
+      .ncn-load__bar {
+        position: relative; width: 100%; height: 3px; background: rgb(148 163 184 / .14);
+        clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+      }
+      html.light .ncn-load__bar { background: rgb(100 116 139 / .22); }
+      .ncn-load__fill {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+        transform: scaleX(0); transform-origin: left center; will-change: transform;
+        background: rgb(16 185 129); box-shadow: 0 0 10px rgb(16 185 129 / .55);
+      }
+      .ncn-load__status { font-size: 9px; letter-spacing: .26em; opacity: .55; min-height: 12px; }
+      .ncn-load__status::before { content: "> "; color: rgb(16 185 129); }
+      @keyframes ncn-splash-failsafe { to { opacity: 0; visibility: hidden; } }
+      @media (prefers-reduced-motion: reduce) {
+        .ncn-splash__frame, .ncn-splash__name { animation: none; }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-950 text-gray-300 font-mono antialiased">
+    <div id="ncn-splash" role="status" aria-label="Loading">
+      <div class="ncn-hud" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="ncn-hud__tl" aria-hidden="true"><b>ACME NET</b><br />AS64500 // L3 EDGE</div>
+      <div class="ncn-hud__tr" aria-hidden="true">// example.com<br />GLOBAL ANYCAST · IPv6</div>
+      <div class="ncn-hud__bl" aria-hidden="true">ANYCAST BACKBONE // SYS.BOOT</div>
+      <div class="ncn-splash__center">
+        <img class="ncn-splash__logo" src="/logo.svg" alt="ACME NET" />
+        <div class="ncn-splash__frame">
+          <div class="ncn-splash__name">ACME NET</div>
+        </div>
+        <div class="ncn-load">
+          <div class="ncn-load__row">
+            <span class="lbl">LOADING</span>
+            <span class="dots"></span>
+            <span class="ncn-load__pct" id="ncn-splash-num">00%</span>
+          </div>
+          <div class="ncn-load__bar"><div class="ncn-load__fill" id="ncn-splash-fill"></div></div>
+          <div class="ncn-load__status" id="ncn-splash-status">INITIALIZING FLEET · NODE 00/08</div>
+        </div>
+      </div>
+    </div>
+    <!-- Splash progress driver. Classic (non-module) script so it runs the
+         instant the parser reaches it — module scripts are deferred. Eases a
+         perceived-progress value toward ~92% while the bundle loads, then
+         main.ts calls window.__ncnSplashDone() to complete it to 100% and run
+         the shutter dismiss. rAF-driven so the motion is genuinely 60fps. -->
+    <script>
+      (function () {
+        var fill = document.getElementById('ncn-splash-fill');
+        var num = document.getElementById('ncn-splash-num');
+        var stx = document.getElementById('ncn-splash-status');
+        var PHASES = ['INITIALIZING FLEET', 'SYNCHRONIZING ROUTES', 'ESTABLISHING SESSIONS', 'FINALIZING'];
+        var p = 0, target = 0.92, done = false, raf;
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+        function tick() {
+          p += (target - p) * (done ? 0.14 : 0.035);
+          if (done && p > 0.999) p = 1;
+          if (fill) fill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+          if (num) num.textContent = pad2(Math.round(p * 100)) + '%';
+          if (stx) {
+            var phase = (done && p >= 1) ? 'READY' : PHASES[p < 0.25 ? 0 : p < 0.55 ? 1 : p < 0.85 ? 2 : 3];
+            stx.textContent = phase + ' · NODE ' + pad2(Math.min(8, Math.round(p * 8))) + '/08';
+          }
+          if (done && p >= 1) { dismiss(); return; }
+          raf = requestAnimationFrame(tick);
+        }
+        function dismiss() {
+          if (raf) cancelAnimationFrame(raf);
+          var s = document.getElementById('ncn-splash');
+          if (!s) return;
+          // Crossfade: fade the app up as the splash fades/recedes out.
+          var a = document.getElementById('app');
+          if (a) a.classList.add('ncn-app-reveal');
+          // Signal the app that content is now visible, so first-paint
+          // animations (e.g. the hero typewriter) start NOW — not while they
+          // were hidden behind the splash. Late-mounting / no-splash views read
+          // the flag instead of waiting for the event.
+          window.__ncnRevealed = true;
+          try { window.dispatchEvent(new Event('ncn:revealed')); } catch (e) {}
+          s.classList.add('ncn-splash--done');
+          setTimeout(function () { if (s && s.parentNode) s.parentNode.removeChild(s); }, 700);
+        }
+        // main.ts calls this once the router is ready (or a safety timer fires).
+        // rAF can be throttled/paused (backgrounded tab, headless render) — in
+        // that state the tick loop never resumes to ease p→1, so the easing
+        // alone can't be trusted to reach dismiss(). Restart the loop AND arm a
+        // rAF-independent timer that dismisses outright. dismiss() is idempotent.
+        window.__ncnSplashDone = function () {
+          done = true; target = 1;
+          if (raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(tick);
+          setTimeout(dismiss, 600);
+        };
+        raf = requestAnimationFrame(tick);
+      })();
+    </script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

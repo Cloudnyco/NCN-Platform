@@ -1,0 +1,10 @@
+[Unit]
+Description=NCN PITR weekly base backup (ctrl-01 primary -> pop-03 offsite archive)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ncn-pitr-basebackup
+Nice=10
+IOSchedulingClass=idle

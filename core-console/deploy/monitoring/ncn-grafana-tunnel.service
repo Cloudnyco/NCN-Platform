@@ -1,0 +1,18 @@
+[Unit]
+Description=NCN Grafana tunnel (ctrl-01 127.0.0.1:3001 -> pop-03 Grafana :3000)
+# Keeps Grafana fully localhost on pop-03 (zero new network exposure); ncn-api
+# reverse-proxies /grafana through this forward, gated by an admin session.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ssh -N \
+  -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+  -o StrictHostKeyChecking=no -o BatchMode=yes \
+  -i /etc/ncn-core-console/fleet-key \
+  -L 127.0.0.1:3001:127.0.0.1:3000 root@2001:db8:51::1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

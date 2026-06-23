@@ -1,0 +1,41 @@
+# Portable ncn-console stack:  docker compose -f deploy/docker/docker-compose.yml up --build
+# Then open http://localhost:8080  (api ↔ db wired; no fleet/secrets → demo/dev mode).
+name: ncn-console
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ncn
+      POSTGRES_PASSWORD: ncn
+      POSTGRES_DB: ncn
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ncn"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ../../backend
+      dockerfile: ../deploy/docker/Dockerfile.api
+    environment:
+      NCN_DATABASE_URL: "postgres://ncn:ncn@db:5432/ncn?sslmode=disable"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:

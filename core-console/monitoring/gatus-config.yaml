@@ -1,0 +1,112 @@
+# NCN uptime monitoring — Gatus (config-as-code). Deployed on pop-03.
+# Secrets come from env (systemd EnvironmentFile=/etc/gatus/gatus.env):
+#   TG_BOT_TOKEN, TG_CHAT_ID  — reused from /etc/ncn-core-console/tg.env.
+# Gatus expands ${VAR} at load. Bound to localhost; reach via SSH tunnel.
+
+web:
+  address: "127.0.0.1"
+  port: 8080
+
+storage:
+  type: sqlite
+  path: /var/mail/vhosts/monitoring/gatus/data.db
+
+# Anti-flap, applied to every alert that doesn't override it:
+#   alert only after 3 consecutive failures; resolve after 2 successes;
+#   send a resolved message too (so flaps show as a fire+resolve pair).
+alerting:
+  telegram:
+    token: "${TG_BOT_TOKEN}"
+    id: "${TG_CHAT_ID}"
+    default-alert:
+      failure-threshold: 3
+      success-threshold: 2
+      send-on-resolved: true
+
+endpoints:
+  # ── public anycast services (external-facing) ──
+  - name: site
+    group: public
+    url: "https://example.com/"
+    interval: 60s
+    conditions: ["[STATUS] == 200"]
+    alerts: [{ type: telegram }]
+  - name: health-api
+    group: public
+    url: "https://example.com/api/v1/health"
+    interval: 60s
+    conditions: ["[STATUS] == 200"]
+    alerts: [{ type: telegram }]
+  - name: status-page
+    group: public
+    url: "https://example.com/status"
+    interval: 60s
+    conditions: ["[STATUS] == 200"]
+    alerts: [{ type: telegram }]
+  - name: looking-glass
+    group: public
+    url: "https://example.com/api/v1/lg/sessions"
+    interval: 60s
+    conditions: ["[STATUS] == 200"]
+    alerts: [{ type: telegram }]
+  - name: admin-console
+    group: public
+    url: "https://admin.example.com/login"
+    interval: 60s
+    conditions: ["[STATUS] == 200"]
+    alerts: [{ type: telegram }]
+
+  # ── per-PoP reachability: v6 anchor over the NCN backbone (2001:db8:R::N) ──
+  # This is the reliable per-PoP signal (matches the fleet's own ncnProbeV6).
+  # v4 unicast pings are intentionally NOT here: from pop-03's single in-mesh
+  # vantage, inter-provider v4 is incidental/unreliable and false-alarms
+  # (e.g. pop-08 v4 unreachable from HK while it's plainly up on v6). Public v4
+  # reachability belongs to the external multi-vantage SaaS layer.
+  - name: pop-03 anchor
+    group: pop
+    url: "icmp://2001:db8:51::1"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-04 anchor
+    group: pop
+    url: "icmp://2001:db8:51::2"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: ctrl-01 anchor
+    group: pop
+    url: "icmp://2001:db8:53::1"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-01 anchor
+    group: pop
+    url: "icmp://2001:db8:53::2"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-02 anchor
+    group: pop
+    url: "icmp://2001:db8:53::3"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-08 anchor
+    group: pop
+    url: "icmp://2001:db8:56::1"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-06 anchor
+    group: pop
+    url: "icmp://2001:db8:54::1"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]
+  - name: pop-05 anchor
+    group: pop
+    url: "icmp://2001:db8:55::1"
+    interval: 60s
+    conditions: ["[CONNECTED] == true"]
+    alerts: [{ type: telegram }]

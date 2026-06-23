@@ -1,0 +1,106 @@
+{
+  "uid": "ncn-overview",
+  "title": "NCN Control Plane",
+  "tags": ["ncn"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "type": "stat", "title": "DB up", "id": 1,
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "mappings": [ { "type": "value", "options": { "0": { "text": "FILE", "color": "red" }, "1": { "text": "PG", "color": "green" } } } ], "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_db_up", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "Streaming standbys", "id": 2,
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_replication_streaming_standbys", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "Fleet nodes up", "id": 3,
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_fleet_nodes_up", "legendFormat": "up", "datasource": { "type": "prometheus", "uid": "ncn-prom" } }, { "refId": "B", "expr": "ncn_fleet_nodes_total", "legendFormat": "total", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "Open op-failures", "id": 4,
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_op_failures_open", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "WAL archive failures", "id": 5,
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_wal_archive_failed_total", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "WAL last-archive age (s)", "id": 6,
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 600 }, { "color": "red", "value": 1800 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_wal_last_archive_age_seconds", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "timeseries", "title": "Replication lag (s)", "id": 7,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_replication_lag_seconds", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "timeseries", "title": "Active alerts by severity", "id": 8,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 30, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_alerts_active", "legendFormat": "{{severity}}", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "timeseries", "title": "Fleet nodes (up vs total)", "id": 9,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_fleet_nodes_up", "legendFormat": "up", "datasource": { "type": "prometheus", "uid": "ncn-prom" } }, { "refId": "B", "expr": "ncn_fleet_nodes_total", "legendFormat": "total", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "timeseries", "title": "AI tokens (rate/5m)", "id": 10,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (kind) (rate(ncn_ai_tokens_total[5m]))", "legendFormat": "{{kind}}", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "PITR base backup age", "id": 11,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 691200 }, { "color": "red", "value": 950400 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "time() - ncn_pitr_last_basebackup_timestamp_seconds", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "stat", "title": "Drained PoPs", "id": 12,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 } ] } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum(ncn_anycast_drained)", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    },
+    {
+      "type": "timeseries", "title": "Anycast upstreams up (per PoP)", "id": 13,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "ncn-prom" },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "stepInterval": 1 } }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "ncn_anycast_upstreams_up", "legendFormat": "{{node}}", "datasource": { "type": "prometheus", "uid": "ncn-prom" } } ]
+    }
+  ]
+}

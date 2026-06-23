@@ -1,0 +1,18 @@
+# Wiki.js config — installed at /var/mail/vhosts/wikijs/config.yml on pop-03
+# (0600, owned ncnmon). Fill `pass` from tyo /etc/ncn-core-console/wikijs.pass.
+# Bound to localhost; reached for setup via the tyo→pop-03 tunnel, and in
+# production via the tyo nginx wiki.example.com reverse proxy.
+port: 3002
+bindIP: 127.0.0.1
+db:
+  type: postgres
+  host: 2001:db8:53::1   # ctrl-01 primary over the backbone
+  port: 5432
+  user: wikijs
+  pass: "<from tyo /etc/ncn-core-console/wikijs.pass>"
+  db: wikijs
+  ssl: false
+logLevel: info
+ha: false
+offline: false
+dataPath: ./data

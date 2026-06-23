@@ -1,0 +1,29 @@
+#!/bin/bash
+# ncn-wal-recv — forced-command receiver on pop-03 for ctrl-01 WAL archiving +
+# PITR restore (deployed as /usr/local/bin/ncn-wal-recv). Pinned in root's
+# authorized_keys via command="...ncn-wal-recv",restrict so the postgres@ctrl-01
+# archive key can only run this verb set over the WAL archive dir — never a
+# shell. The real command arrives in $SSH_ORIGINAL_COMMAND.
+#   recv <file>  : stdin -> archive/wal/<file> (atomic, 0640 group-readable)
+#   get  <file>  : archive/wal/<file> -> stdout (for restore_command)
+#   have <file>  : exit 0 if present, else 1
+#   list         : list segment names
+set -uo pipefail
+ARCH=/var/mail/vhosts/ncn-ha/wal-archive
+WAL="$ARCH/wal"
+set -- $SSH_ORIGINAL_COMMAND
+verb="${1:-}"; file="${2:-}"
+if [ -n "$file" ]; then
+  case "$file" in
+    *[!A-Za-z0-9._-]*) echo 'bad filename' >&2; exit 3 ;;
+    .*|*/*) echo 'bad filename' >&2; exit 3 ;;
+  esac
+fi
+case "$verb" in
+  recv) [ -n "$file" ] || exit 3; umask 027; tmp="$WAL/.$file.$$.tmp"
+        cat > "$tmp" && sync "$tmp" && mv -f "$tmp" "$WAL/$file" && chmod 0640 "$WAL/$file" || { rm -f "$tmp"; exit 6; } ;;
+  get)  [ -n "$file" ] && [ -f "$WAL/$file" ] || exit 4; cat "$WAL/$file" ;;
+  have) [ -n "$file" ] && [ -f "$WAL/$file" ] ;;
+  list) ls -1 "$WAL" 2>/dev/null ;;
+  *) echo "denied: $SSH_ORIGINAL_COMMAND" >&2; exit 5 ;;
+esac
