@@ -2,25 +2,26 @@
 
 > **English** · [简体中文](README.zh-CN.md)
 
-An open-source operations platform for running a small **multi-PoP anycast
-network**: BGP/BIRD fleet telemetry, alerting + AI triage, RPKI monitoring,
-peering intake, capacity/SLA/flow analytics, DDoS mitigation, on-call, webmail,
-a self-hosted load balancer/failover, wiki, and identity — **self-hosting over
-paid SaaS**.
+NCN is an operations platform for a multi-PoP anycast network. It provides
+BGP/BIRD fleet telemetry, alerting with rule- and anomaly-based detection, RPKI
+monitoring, peering intake, capacity / SLA / flow analytics, DDoS mitigation,
+on-call scheduling, webmail, a load balancer with active/passive failover, a
+wiki, and identity with SSO.
 
-Run it for **your own** network. Everything operator-specific is configured via
-environment variables (`NCN_*`, see [`.env.example`](.env.example)) and a runtime
-node registry. The repo ships with **placeholders only** — `AS64500`,
-`example.com`, RFC5737/RFC3849 addresses, `ctrl-01`/`pop-0N` node names — and
-points at no real network.
+All operator-specific values are supplied through environment variables
+(`NCN_*`, see [`.env.example`](.env.example)) and a runtime node registry. The
+repository ships with placeholders only — `AS64500`, `example.com`,
+RFC5737/RFC3849 addresses, and `ctrl-01` / `pop-0N` node names — and references
+no real network.
 
-**Get started:** [`core-console/QUICKSTART.md`](core-console/QUICKSTART.md) covers
-the four entry points — local dev, one-command deploy, fresh-host/DR bootstrap,
-and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
-[`CONTRIBUTING.md`](CONTRIBUTING.md) · **Security:** [`SECURITY.md`](SECURITY.md).
+Setup is documented in [`core-console/QUICKSTART.md`](core-console/QUICKSTART.md)
+(four entry points: local development, single-command deploy, fresh-host /
+disaster-recovery bootstrap, and Docker Compose) and
+[`DEPLOYMENT.md`](DEPLOYMENT.md) (from scratch to a high-availability control
+plane).
 
-> Code, comments and commit messages are English. Member-facing documentation
-> (the wiki) is primarily Simplified Chinese.
+**License:** [Apache 2.0](LICENSE) · **Contributing:**
+[`CONTRIBUTING.md`](CONTRIBUTING.md) · **Security:** [`SECURITY.md`](SECURITY.md)
 
 ---
 
@@ -46,8 +47,8 @@ and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
 ## Architecture
 
 ```
-                        your edge / CDN (TLS)
-                                   │
+                        edge / CDN (TLS)
+                                │
         admin.example.com   example.com / wiki.example.com   mail.example.com
                 │                    │                          │
                 ▼                    ▼                          ▼
@@ -59,58 +60,55 @@ and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
                                  │ telemetry (SSH / HTTPS)
             ┌──────────┬─────────┼─────────┬───────────┐
             ▼          ▼         ▼         ▼           ▼
-          PoP        PoP       PoP       PoP    …   (as many as you operate)
+          PoP        PoP       PoP       PoP    …   (any number of PoPs)
 
-   Each PoP runs BIRD (BGP, anycast) and optionally ncn-agent (telemetry).
-   Roles — control / observability / HA standby / RPKI / edge — are composable:
-   collapse them onto one host for a small setup, or spread them across many at
-   scale. The backbone is your own IPv6 mesh between PoPs.
+   Each PoP runs BIRD (BGP, anycast) and, optionally, ncn-agent for telemetry.
+   Roles — control, observability, HA standby, RPKI, edge — are composable and
+   may share a host or be distributed. The backbone is an IPv6 mesh between PoPs.
 ```
 
-The console **shells out to real probes** (`uptime`, `/proc/loadavg`, `birdc`,
-`wg`) and reads live infrastructure — there is no mock data. Writes to the
-fleet flow through one executor (`ncn-api`) which enforces auth and audits
-every action.
+The control plane reads live infrastructure by executing real probes (`uptime`,
+`/proc/loadavg`, `birdc`, `wg`); there is no mock data. All writes to the fleet
+pass through a single executor (`ncn-api`), which enforces authentication and
+records an audit entry for every action.
 
 ---
 
 ## Repository layout
 
-| Path | What it is |
+| Path | Description |
 |---|---|
-| [`core-console/`](core-console/) | The platform: `ncn-api` (Go backend) + Vue 3 SPA. The bulk of the project. |
-| `core-console/agent/` | `ncn-agent` — per-PoP telemetry agent (HTTPS + HMAC) replacing SSH polling. |
-| `core-console/lb/` | `ncn-lb` — self-hosted Cloudflare-LB-equivalent: health-checked origin pools + active/passive failover. |
-| `core-console/mcp/` | `ncn-mcp` — MCP server exposing the console's ops tools to Claude Code. |
-| [`webmail/`](webmail/) | `ncn-mail` — standalone webmail for `mail.example.com` (self-contained). |
-| `cli/ncn-debug/` | Read-only ops CLI over the console REST API (single static Go binary). |
-| `cli/ncn-login/` | Operator login helper for the CLIs. |
-| `deploy-all.sh` | Single-command deploy of the whole stack (webmail → core-console). |
-| `scripts/`, `backups/` | Workspace-level helper scripts and snapshot staging. |
+| [`core-console/`](core-console/) | The platform: `ncn-api` (Go backend) and the Vue 3 SPA. |
+| `core-console/agent/` | `ncn-agent` — per-PoP telemetry agent (HTTPS + HMAC), an alternative to SSH polling. |
+| `core-console/lb/` | `ncn-lb` — load balancer: health-checked origin pools with active/passive failover. |
+| `core-console/mcp/` | `ncn-mcp` — MCP server exposing the console's operations tools. |
+| [`webmail/`](webmail/) | `ncn-mail` — standalone webmail for `mail.example.com`. |
+| `cli/ncn-debug/` | Read-only operations CLI over the console REST API (single static Go binary). |
+| `cli/ncn-login/` | Operator authentication helper for the CLIs. |
+| `deploy-all.sh` | Single-command deploy of the full stack (webmail, then core-console). |
+| `scripts/` | Workspace-level helper scripts (backup/restore, PITR, provisioning). |
 
 ---
 
 ## Roles & topology
 
-The platform is a set of **composable roles** you map onto however many hosts you
-run — from a single box to dozens of PoPs. Nothing assumes a fixed node count.
+The platform is a set of composable roles mapped onto an arbitrary number of
+hosts, from a single machine to many PoPs. No fixed node count is assumed.
 
-| Role | What runs there | Cardinality |
+| Role | Components | Cardinality |
 |---|---|---|
-| **Control** | `ncn-api`, PostgreSQL primary, nginx (console / public / wiki vhosts) | exactly one; the only writer to the fleet |
-| **Edge PoP** | BIRD (BGP / anycast), optionally `ncn-agent` | as many as your network has — the console just reads them |
-| **Observability** | Prometheus + Grafana + Gatus | optional; any host |
-| **HA standby** | PostgreSQL streaming replica + warm `ncn-api` + `ncn-lb` failover | optional; for failover (see [`DEPLOYMENT.md`](DEPLOYMENT.md)) |
-| **RPKI** | Krill CA (publishes ROAs) + Routinator (validates) | optional; if you run RPKI |
-| **Webmail** | `ncn-mail` + Postfix/Dovecot | optional; for `mail.example.com` |
+| **Control** | `ncn-api`, PostgreSQL primary, nginx (console / public / wiki vhosts) | exactly one; the sole writer to the fleet |
+| **Edge PoP** | BIRD (BGP / anycast), optionally `ncn-agent` | any number; the control plane reads them |
+| **Observability** | Prometheus, Grafana, Gatus | optional; any host |
+| **HA standby** | PostgreSQL streaming replica, warm `ncn-api`, `ncn-lb` failover | optional; see [`DEPLOYMENT.md`](DEPLOYMENT.md) |
+| **RPKI** | Krill CA (publishes ROAs), Routinator (validates) | optional |
+| **Webmail** | `ncn-mail`, Postfix/Dovecot | optional |
 
-- **Small:** put Control — and everything else — on one host; the roles collapse.
-- **Larger:** give roles their own hosts and add a standby for HA. Edge PoPs scale
-  horizontally: register as many as you operate, over your own IPv6 backbone.
-- Public endpoints sit behind your own edge / CDN (TLS).
-
-(Node ids like `ctrl-01` / `pop-01` in this repo are just example placeholders —
-name yours whatever you like in the node registry.)
+Roles may be collapsed onto one host for a minimal deployment or distributed
+across dedicated hosts at scale; edge PoPs scale horizontally. Public endpoints
+are served behind an external edge / CDN over TLS. Node identifiers such as
+`ctrl-01` and `pop-01` are illustrative placeholders, assigned by the operator
+in the node registry.
 
 ---
 
@@ -118,29 +116,29 @@ name yours whatever you like in the node registry.)
 
 ### Backend — `ncn-api`
 
-Go `net/http` service (`package main`, ~28k LOC) listening on `:9000`,
-socket-activated by systemd. State lives in **PostgreSQL** via `pgx` (`database/sql`)
-with **embedded migrations** (`//go:embed migrations/*.sql`); every store is
-**nil-DB tolerant** and falls back to JSON files when no database is configured,
-so the binary runs with or without Postgres.
+A Go `net/http` service (`package main`) listening on `:9000`, socket-activated
+by systemd. State is stored in PostgreSQL via `pgx` (`database/sql`) with
+embedded migrations (`//go:embed migrations/*.sql`). Every store is nil-DB
+tolerant and falls back to JSON files when no database is configured, so the
+binary runs with or without PostgreSQL.
 
-Capabilities are organized roughly one concern per file under `core-console/backend/`:
+Capabilities are organized approximately one concern per file under
+`core-console/backend/`:
 
 - **Fleet & nodes** — `fleet.go`, `noderegistry.go`, `nodes_api.go`,
   `nodes_onboard.go`, `heartbeat.go`, `bird_scrape.go`
 - **Anycast** — `anycast.go` (drain / undrain a PoP from anycast)
 - **Mesh / config** — `mesh_config.go`, `meshApply.go`, `tunnel.go`
-- **HA / DR / replication** — `replmon.go` (+ `lb/`, PITR scripts)
+- **HA / DR / replication** — `replmon.go` (with `lb/` and the PITR scripts)
 - **Observability** — `metrics.go`, `alertmetrics.go`, `grafana_proxy.go`
 - **Alerting** — `alerts.go`, `alertrules.go`, `alertrules_api.go`,
   `alertanomaly.go`
-- **RPKI** — `rpki.go` (ROA-validity + ROV monitoring)
+- **RPKI** — `rpki.go` (ROA-validity and ROV monitoring)
 - **Auth & access** — `auth.go`, `auth_apitoken.go`, `auth_ssh.go`,
   `auth_sso.go`, `oauth.go`, `oauth_telegram.go`, `passkey.go`,
-  `idp_provider.go` (console-as-OAuth2-IdP), `recover_bootstrap.go`
-- **Telegram bot** — `bot_tg.go`, `bot_identity_test.go`, `bot_manage.go`,
-  `bot_netadmin.go`, `bot_opfail.go`, `bot_ai.go`, `bot_agent_tg.go`,
-  `bot_drill.go`, `notify_tg.go`
+  `idp_provider.go` (console as OAuth2 IdP), `recover_bootstrap.go`
+- **Telegram bot** — `bot_tg.go`, `bot_manage.go`, `bot_netadmin.go`,
+  `bot_opfail.go`, `bot_ai.go`, `bot_agent_tg.go`, `bot_drill.go`, `notify_tg.go`
 - **AI assistant** — `deepseek.go`, `agent.go`, `agent_tools.go`,
   `ai_usage.go`, `ai_history_api.go`, `model_config.go`
 - **Wiki** — `wikistore.go`, `wiki_api.go`
@@ -148,41 +146,39 @@ Capabilities are organized roughly one concern per file under `core-console/back
   `visitor.go`, `billing.go`, `invite.go`
 - **Mail bridge** — `mail_bridge.go`, `mail_forgot_bridge.go`,
   `mail_role_recover.go` (console ↔ webmail)
-- **Ops plumbing** — `opfailures.go`, `audit.go`, `ratelimit.go`,
+- **Operations plumbing** — `opfailures.go`, `audit.go`, `ratelimit.go`,
   `turnstile.go`, `term.go`, `admincli.go`, `db.go`, `fx.go`
 
 ### Frontend — SPA
 
-Vue 3 + Vite single-page app (TypeScript, Tailwind, Pinia, Vue Router,
-`vue-i18n`). One build serves three hosts; `App.vue` picks a layout by route:
+A Vue 3 + Vite single-page application (TypeScript, Tailwind, Pinia, Vue Router,
+`vue-i18n`). One build serves three hosts; `App.vue` selects a layout by route:
 
-- **admin.example.com** — the operator console (`AdminLayout`): Dashboard,
-  Fleet, Servers, Alerts, Alert Rules, Observability, Performance,
-  Connectivity, Bird, Security, Audit, Billing, Assistant, Wiki, Onboarding.
-- **example.com** — the public site (`PublicLayout`): Landing, Looking Glass,
-  Status, Peering info + application, legal pages, and the public wiki
-  (`/docs`).
-- **wiki.example.com** — the public wiki (same SPA dist).
+- **admin host** — operator console (`AdminLayout`): Dashboard, Fleet, Servers,
+  Alerts, Alert Rules, Observability, Performance, Connectivity, Bird, Security,
+  Audit, Billing, Assistant, Wiki, Onboarding.
+- **public host** — public site (`PublicLayout`): Landing, Looking Glass, Status,
+  peering information and application, legal pages, and the public wiki (`/docs`).
+- **wiki host** — public wiki (the same SPA build).
 
-i18n carries **en / zh-CN / zh-TW**; a pre-build `lint:i18n` step fails the
-build if a key is missing from any locale. `marked` + `DOMPurify` render wiki
-markdown; `@xterm/xterm` powers the in-console terminal.
+Localization ships `en` / `zh-CN` / `zh-TW`; a pre-build `lint:i18n` step fails
+the build if a key is missing from any locale. `marked` and `DOMPurify` render
+wiki markdown; `@xterm/xterm` provides the in-console terminal.
 
 ### Sub-components (`agent` / `lb` / `mcp`)
 
-- **`ncn-agent`** (`agent/`) — runs on each PoP (`:9101`, HTTPS + HMAC-bearer)
-  and returns the same telemetry pipeline output that `fleet.go` used to
-  collect over SSH. Per-node `Transport` selects `ssh` (default) or `rest`
-  with SSH fallback, so it rolls out one PoP at a time.
+- **`ncn-agent`** (`agent/`) — runs on a PoP (`:9101`, HTTPS + HMAC bearer) and
+  returns the same telemetry that `fleet.go` otherwise collects over SSH. A
+  per-node `Transport` selects `ssh` (default) or `rest` with SSH fallback,
+  allowing incremental rollout.
 - **`ncn-lb`** (`lb/`) — health-checked origin pools with automatic
-  active/passive failover (promote PG replica → start standby `ncn-api` →
-  repoint Cloudflare DNS). Runs on a standby host to survive a control-node outage. **Ships
-  in `observe` mode** (logs what it would do); arm only after the failover
-  script is tested. No automatic fail-back (anti-flap).
-- **`ncn-mcp`** (`mcp/`) — a thin MCP proxy that exposes the same ops tools the
-  in-console AI agent uses (`list_nodes`, `fleet_status`, `run_command`, …) to
-  a local Claude Code. The console backend remains the only executor and
-  enforces every safety rule.
+  active/passive failover (promote the PostgreSQL replica, start the standby
+  `ncn-api`, repoint DNS). Ships in `observe` mode (logging intended actions
+  only); arming is a deliberate step after the failover script is validated.
+  There is no automatic fail-back, to avoid flapping.
+- **`ncn-mcp`** (`mcp/`) — a Model Context Protocol proxy exposing the same
+  operations tools used by the in-console AI agent. The console backend remains
+  the sole executor and enforces every safety rule.
 
 ---
 
@@ -190,33 +186,36 @@ markdown; `@xterm/xterm` powers the in-console terminal.
 
 | Area | Summary |
 |---|---|
-| **Fleet telemetry** | Live per-PoP metrics (load, BGP sessions via `birdc`, WireGuard, uptime); node registry + onboarding/decommission lifecycle. |
-| **Anycast ops** | Human-approved drain/undrain of a PoP from anycast (`birdc disable upstream_*`); refuses to drain the last/critical node. |
-| **HA & DR** | PostgreSQL streaming replication (primary → standby, sub-second RPO); PITR via WAL archiving + weekly base-backups + restore drills; `ncn-lb` failover; daily state snapshots (local + offsite). |
-| **Observability** | Hand-written Prometheus `/metrics` (no secrets); Prometheus + Grafana on an observability host (Grafana embedded in the console via an admin-gated reverse proxy); Gatus uptime. |
-| **Alerting** | Data-driven rules engine (sustain / resolve / escalate / repeat) **plus** EWMA-based anomaly detection (per node+metric baselines), routed to Telegram. |
-| **RPKI** | Monitors our own prefixes' ROA validity (via RIPEstat) and live route-origin-validation tags read from PoP BIRD; Krill publishes ROAs, Routinator validates. |
-| **Auth & access** | Session cookies (HMAC) + TOTP; OAuth (Google / Microsoft / GitHub / Telegram); passkeys; API tokens; SSH-key login; the console itself acts as an OAuth2 **IdP** for SSO into other services. |
-| **Telegram bot** | Operator-bound, approval-gated control of the fleet; op-failure cards; AI Q&A; group companion. |
-| **AI assistant** | DeepSeek-backed tool-calling ops agent (inspect + human-approved act, incl. `run_command`); available in the console and over MCP. |
-| **Self-hosted wiki** | Markdown content in Postgres, rendered in-app; public (anonymous) + internal (operator-gated) tiers; in-browser editing with version history. |
-| **Member-facing** | Public landing, Looking Glass, status/incidents page, PeeringDB-backed peering info + application intake. |
-| **Webmail** | `ncn-mail` backing `mail.example.com` (IMAP/SMTP loopback to dovecot/postfix, DKIM via rspamd). |
-| **Audit** | Every privileged action is recorded; audit log is rsynced offsite on a timer. |
+| **Fleet telemetry** | Per-PoP metrics (load, BGP sessions via `birdc`, WireGuard, uptime); node registry with an onboarding/decommission lifecycle. |
+| **Anycast operations** | Approval-gated drain/undrain of a PoP from anycast (`birdc disable upstream_*`); refuses to drain the last or a critical node. |
+| **HA & DR** | PostgreSQL streaming replication (primary → standby, sub-second RPO); PITR via WAL archiving, weekly base-backups, and restore drills; `ncn-lb` failover; daily state snapshots (local and offsite). |
+| **Observability** | Hand-written Prometheus `/metrics` (no secrets); Prometheus and Grafana on an observability host (Grafana embedded via an admin-gated reverse proxy); Gatus uptime. |
+| **Alerting** | Data-driven rules engine (sustain / resolve / escalate / repeat) and EWMA-based anomaly detection (per node+metric baselines), routed to Telegram. |
+| **RPKI** | Monitors the operator's prefixes for ROA validity (via RIPEstat) and live route-origin-validation tags from PoP BIRD; Krill publishes ROAs, Routinator validates. |
+| **Auth & access** | HMAC session cookies and TOTP; OAuth/OIDC (GitHub, Telegram); passkeys; API tokens; SSH-key login. The console can act as an OAuth2 identity provider for SSO into other services. |
+| **Telegram bot** | Operator-bound, approval-gated fleet control; operation-failure cards; AI Q&A; group companion. |
+| **AI assistant** | DeepSeek-compatible tool-calling agent (inspect, plus human-approved actions including `run_command`); available in the console and over MCP. |
+| **Self-hosted wiki** | Markdown content in PostgreSQL, rendered in-app; public (anonymous) and internal (operator-gated) tiers; in-browser editing with version history. |
+| **Member-facing** | Public landing page, Looking Glass, status/incidents page, and PeeringDB-backed peering information and application intake. |
+| **Webmail** | `ncn-mail` for `mail.example.com` (IMAP/SMTP loopback to Dovecot/Postfix, DKIM via rspamd). |
+| **Audit** | Every privileged action is recorded; the audit log is replicated offsite on a timer. |
 
 ---
 
 ## Tech stack
 
-- **Backend:** Go 1.25, `net/http`, `pgx` v5 / PostgreSQL 17, embedded SQL migrations.
-- **Frontend:** Vue 3.5, Vite 6, TypeScript, Tailwind 3, Pinia, Vue Router, vue-i18n, marked + DOMPurify, xterm.js.
-- **Infrastructure:** nginx, systemd (socket-activated services + timers), BIRD (BGP), Krill + Routinator (RPKI), Prometheus + Grafana + Gatus, Cloudflare (edge), WireGuard (backbone).
+- **Backend:** Go, `net/http`, `pgx` v5 / PostgreSQL, embedded SQL migrations.
+- **Frontend:** Vue 3, Vite, TypeScript, Tailwind, Pinia, Vue Router, vue-i18n,
+  marked + DOMPurify, xterm.js.
+- **Infrastructure:** nginx, systemd (socket-activated services and timers),
+  BIRD (BGP), Krill + Routinator (RPKI), Prometheus + Grafana + Gatus,
+  an external edge/CDN, WireGuard (backbone).
 
 ---
 
 ## Build & run
 
-Prerequisites: **Go ≥ 1.25**, **Node ≥ 20** (for the SPA builds).
+Prerequisites: Go ≥ 1.22 and Node ≥ 18 (for the SPA build).
 
 ```sh
 # Backend (core-console)
@@ -235,74 +234,76 @@ npm run build                  # type-check + i18n lint + production dist/
 cd cli/ncn-debug && go build -o ncn-debug
 ```
 
-PostgreSQL is optional for a local run — without `NCN_DB_*` the backend uses
-its JSON file fallback.
+PostgreSQL is optional for a local run; without `NCN_DATABASE_URL` the backend
+uses its JSON file fallback.
 
 ---
 
 ## Deployment
 
-Deploys are **gated** and run from the workspace against the live hosts over SSH.
+Deployments are gated and run from a workstation against the target hosts over
+SSH. See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the full guide.
 
 ```sh
-# core-console only
-bash core-console/deploy/deploy.sh backend     # go vet + go test on tyo, build, atomic swap, zero-downtime restart
-bash core-console/deploy/deploy.sh frontend    # i18n lint + type-check + vite build, ship dist/
+# core-console
+core-console/deploy/deploy.sh backend     # go vet + go test on the target, build, atomic swap, zero-downtime restart
+core-console/deploy/deploy.sh frontend    # i18n lint + type-check + vite build, ship dist/
 
-# whole stack (webmail first, then core-console)
+# full stack (webmail, then core-console)
 ./deploy-all.sh
 ```
 
 - The backend deploy refuses to ship unless `go vet ./...` and `go test ./...`
-  pass on the target; it backs up the previous binary and supports
-  `deploy.sh rollback`.
-- `ncn-api` is socket-activated (`ncn-api.socket` + `ncn-api.service`), so the
-  swap is zero-downtime.
-- A daily state DR snapshot (local + an offsite host) and an audit-log offsite
-  rsync run on systemd timers (`deploy/ncn-state-backup.*`, `deploy/ncn-audit-rsync.*`).
+  pass on the target; the previous binary is backed up and `deploy.sh rollback`
+  is supported.
+- `ncn-api` is socket-activated (`ncn-api.socket` + `ncn-api.service`), making
+  the binary swap zero-downtime.
+- A daily state snapshot (local and offsite) and an offsite audit-log copy run on
+  systemd timers (`deploy/ncn-state-backup.*`, `deploy/ncn-audit-rsync.*`).
 
 ---
 
 ## Configuration
 
-- Runtime config and secrets live under `/etc/ncn-core-console/` on the control node
-  (e.g. `session.key`, `oauth.env`, the fleet SSH key). See
+- Runtime configuration and secrets reside under `/etc/ncn-core-console/` on the
+  control node (for example `session.key`, `oauth.env`, the fleet SSH key); see
   `core-console/deploy/oauth.env.example`.
-- nginx vhosts: `core-console/deploy/nginx-ncn-core-console.conf` (console /
-  public / wiki) — public endpoints are explicitly allow-listed; everything
-  else under `/api/` returns 404 from public hosts.
+- nginx vhosts are defined in `core-console/deploy/nginx-ncn-core-console.conf`
+  (console / public / wiki). Public endpoints are explicitly allow-listed; any
+  other path under `/api/` returns 404 from public hosts.
 - `ncn-lb` reads `/etc/ncn-lb/config.json`; webmail and the bot read their own
   env files on their respective hosts.
 
-Secrets are never committed. Real values are provisioned out-of-band on the
+Secrets are never committed. Production values are provisioned out-of-band on the
 hosts; `*.example` files document the expected shape.
 
 ---
 
 ## Security model
 
-- **Three auth tiers:** public (nginx allow-list), internal (any authenticated
-  operator), and admin (role-gated). The session cookie is HMAC-signed and
-  **host-scoped to `admin.example.com`**.
+- **Three access tiers:** public (nginx allow-list), internal (any authenticated
+  operator), and admin (role-gated). The session cookie is HMAC-signed and scoped
+  to the admin host.
 - **Host separation** is enforced at both nginx and the SPA router (defense in
-  depth): the public hosts never expose admin APIs.
-- **One executor:** all fleet writes go through `ncn-api`. The MCP server, the
-  bot, and the CLIs are clients — they cannot touch the fleet directly. Write /
-  command tools require an **admin** operator and are **audited**.
-- **Fleet access** uses a dedicated SSH key on the control node; remote command execution
-  is human-approved through the agent flow.
-- **Content safety:** wiki markdown is sanitized with DOMPurify before render;
-  the public wiki API server-side-enforces `is_public` so internal pages never
-  leak.
+  depth): public hosts do not expose admin APIs.
+- **Single executor:** all fleet writes pass through `ncn-api`. The MCP server,
+  the bot, and the CLIs are clients and cannot reach the fleet directly. Write
+  and command tools require an admin operator and are audited.
+- **Fleet access** uses a dedicated SSH key on the control node; remote command
+  execution is human-approved through the agent flow.
+- **Content safety:** wiki markdown is sanitized with DOMPurify before rendering;
+  the public wiki API enforces `is_public` server-side so internal pages are not
+  exposed.
 
 ---
 
 ## Documentation
 
-- **Operator handbook & member docs:** the self-hosted wiki — `wiki.example.com`
-  (public) and `admin.example.com/admin/wiki` (internal ops). Source markdown in
+- **Setup:** [`core-console/QUICKSTART.md`](core-console/QUICKSTART.md) and
+  [`DEPLOYMENT.md`](DEPLOYMENT.md).
+- **Operator and member documentation:** the self-hosted wiki (public at the
+  wiki host, internal under the admin host); source markdown in
   `core-console/wiki/`.
-- **Runbooks:** `core-console/docs/` (`PITR-RESTORE.md`, `POP-ONBOARDING.md`)
-  and the wiki's `ops/runbooks/*`.
+- **Runbooks:** `core-console/docs/` (`PITR-RESTORE.md`, `POP-ONBOARDING.md`).
 - **Per-component READMEs:** `webmail/README.md`, `core-console/agent/README.md`,
   `core-console/mcp/README.md`, `cli/ncn-debug/README.md`.
