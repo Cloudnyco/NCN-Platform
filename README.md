@@ -28,7 +28,7 @@ and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
 
 - [Architecture](#architecture)
 - [Repository layout](#repository-layout)
-- [Hosts & topology](#hosts--topology)
+- [Roles & topology](#roles--topology)
 - [core-console](#core-console)
   - [Backend — `ncn-api`](#backend--ncn-api)
   - [Frontend — SPA](#frontend--spa)
@@ -46,25 +46,25 @@ and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
 ## Architecture
 
 ```
-                        Cloudflare (proxy, TLS Strict)
+                        your edge / CDN (TLS)
                                    │
         admin.example.com   example.com / wiki.example.com   mail.example.com
                 │                    │                          │
                 ▼                    ▼                          ▼
-        ┌───────────────── ctrl-01 (control node) ───────┐  ┌── pop-03 ──┐
-        │  nginx → ncn-api (:9000, Go)                   │  │  ncn-mail  │
-        │  PostgreSQL (primary)                          │  │  dovecot   │
-        │  Vue SPA (admin console + public site + wiki)  │  │  postfix   │
-        └───────────────────────┬────────────────────────┘  │  rspamd    │
-                                 │ telemetry (SSH / HTTPS)    │  Prometheus│
-            ┌────────────┬───────┼───────┬────────────┐      │  Grafana   │
-            ▼            ▼       ▼       ▼            ▼      │  Gatus     │
-         pop-03       pop-04   pop-01   pop-08 … (8 PoPs)    └────────────┘
-       (observ.+    (HA stby   (Krill CA
-        standby)     + ncn-lb)  + Routinator)
+        ┌──────────── control node ──────────────────────┐  ┌─ service node ─┐
+        │  nginx → ncn-api (:9000, Go)                    │  │  webmail        │
+        │  PostgreSQL (primary)                           │  │  observability  │
+        │  Vue SPA (admin console + public site + wiki)   │  │  PG standby …   │
+        └───────────────────────┬─────────────────────────┘  └─────────────────┘
+                                 │ telemetry (SSH / HTTPS)
+            ┌──────────┬─────────┼─────────┬───────────┐
+            ▼          ▼         ▼         ▼           ▼
+          PoP        PoP       PoP       PoP    …   (as many as you operate)
 
    Each PoP runs BIRD (BGP, anycast) and optionally ncn-agent (telemetry).
-   Backbone: 2001:db8:50::/44 (IPv6 mesh between PoPs).
+   Roles — control / observability / HA standby / RPKI / edge — are composable:
+   collapse them onto one host for a small setup, or spread them across many at
+   scale. The backbone is your own IPv6 mesh between PoPs.
 ```
 
 The console **shells out to real probes** (`uptime`, `/proc/loadavg`, `birdc`,
@@ -82,7 +82,7 @@ every action.
 | `core-console/agent/` | `ncn-agent` — per-PoP telemetry agent (HTTPS + HMAC) replacing SSH polling. |
 | `core-console/lb/` | `ncn-lb` — self-hosted Cloudflare-LB-equivalent: health-checked origin pools + active/passive failover. |
 | `core-console/mcp/` | `ncn-mcp` — MCP server exposing the console's ops tools to Claude Code. |
-| [`webmail/`](webmail/) | `ncn-mail` — standalone webmail for `mail.example.com` (self-contained on pop-03). |
+| [`webmail/`](webmail/) | `ncn-mail` — standalone webmail for `mail.example.com` (self-contained). |
 | `cli/ncn-debug/` | Read-only ops CLI over the console REST API (single static Go binary). |
 | `cli/ncn-login/` | Operator login helper for the CLIs. |
 | `deploy-all.sh` | Single-command deploy of the whole stack (webmail → core-console). |
@@ -90,18 +90,27 @@ every action.
 
 ---
 
-## Hosts & topology
+## Roles & topology
 
-| Host | Role |
-|---|---|
-| **ctrl-01** | Control node. `ncn-api`, PostgreSQL **primary**, nginx for all three vhosts (console / public / wiki), WAL archiving source. |
-| **pop-03** | Observability (Prometheus + Grafana + Gatus), **webmail**, PG standby + WAL-archive receiver, warm-standby `ncn-api`. |
-| **pop-04** | HA: PostgreSQL **streaming standby** + `ncn-lb` failover controller + offsite DR target. |
-| **pop-01** | RPKI: **Krill** CA (publishes ROAs) + **Routinator** validator (central RTR). Also a BGP node. |
-| **pop-02 / pop-08 / pop-06 / pop-05** | PoPs (BGP / anycast). |
+The platform is a set of **composable roles** you map onto however many hosts you
+run — from a single box to dozens of PoPs. Nothing assumes a fixed node count.
 
-8 PoPs participate in anycast over the `2001:db8:50::/44` backbone. Public
-endpoints are fronted by Cloudflare (proxied, SSL Strict).
+| Role | What runs there | Cardinality |
+|---|---|---|
+| **Control** | `ncn-api`, PostgreSQL primary, nginx (console / public / wiki vhosts) | exactly one; the only writer to the fleet |
+| **Edge PoP** | BIRD (BGP / anycast), optionally `ncn-agent` | as many as your network has — the console just reads them |
+| **Observability** | Prometheus + Grafana + Gatus | optional; any host |
+| **HA standby** | PostgreSQL streaming replica + warm `ncn-api` + `ncn-lb` failover | optional; for failover (see [`DEPLOYMENT.md`](DEPLOYMENT.md)) |
+| **RPKI** | Krill CA (publishes ROAs) + Routinator (validates) | optional; if you run RPKI |
+| **Webmail** | `ncn-mail` + Postfix/Dovecot | optional; for `mail.example.com` |
+
+- **Small:** put Control — and everything else — on one host; the roles collapse.
+- **Larger:** give roles their own hosts and add a standby for HA. Edge PoPs scale
+  horizontally: register as many as you operate, over your own IPv6 backbone.
+- Public endpoints sit behind your own edge / CDN (TLS).
+
+(Node ids like `ctrl-01` / `pop-01` in this repo are just example placeholders —
+name yours whatever you like in the node registry.)
 
 ---
 
@@ -167,7 +176,7 @@ markdown; `@xterm/xterm` powers the in-console terminal.
   with SSH fallback, so it rolls out one PoP at a time.
 - **`ncn-lb`** (`lb/`) — health-checked origin pools with automatic
   active/passive failover (promote PG replica → start standby `ncn-api` →
-  repoint Cloudflare DNS). Runs on pop-04 to survive a ctrl-01 outage. **Ships
+  repoint Cloudflare DNS). Runs on a standby host to survive a control-node outage. **Ships
   in `observe` mode** (logs what it would do); arm only after the failover
   script is tested. No automatic fail-back (anti-flap).
 - **`ncn-mcp`** (`mcp/`) — a thin MCP proxy that exposes the same ops tools the
@@ -183,8 +192,8 @@ markdown; `@xterm/xterm` powers the in-console terminal.
 |---|---|
 | **Fleet telemetry** | Live per-PoP metrics (load, BGP sessions via `birdc`, WireGuard, uptime); node registry + onboarding/decommission lifecycle. |
 | **Anycast ops** | Human-approved drain/undrain of a PoP from anycast (`birdc disable upstream_*`); refuses to drain the last/critical node. |
-| **HA & DR** | PostgreSQL streaming replication (ctrl-01 → pop-04, sub-second RPO); PITR via WAL archiving + weekly base-backups + restore drills; `ncn-lb` failover; daily state snapshots (local + offsite). |
-| **Observability** | Hand-written Prometheus `/metrics` (no secrets); Prometheus + Grafana on pop-03 (Grafana embedded in the console via an admin-gated reverse proxy); Gatus uptime. |
+| **HA & DR** | PostgreSQL streaming replication (primary → standby, sub-second RPO); PITR via WAL archiving + weekly base-backups + restore drills; `ncn-lb` failover; daily state snapshots (local + offsite). |
+| **Observability** | Hand-written Prometheus `/metrics` (no secrets); Prometheus + Grafana on an observability host (Grafana embedded in the console via an admin-gated reverse proxy); Gatus uptime. |
 | **Alerting** | Data-driven rules engine (sustain / resolve / escalate / repeat) **plus** EWMA-based anomaly detection (per node+metric baselines), routed to Telegram. |
 | **RPKI** | Monitors our own prefixes' ROA validity (via RIPEstat) and live route-origin-validation tags read from PoP BIRD; Krill publishes ROAs, Routinator validates. |
 | **Auth & access** | Session cookies (HMAC) + TOTP; OAuth (Google / Microsoft / GitHub / Telegram); passkeys; API tokens; SSH-key login; the console itself acts as an OAuth2 **IdP** for SSO into other services. |
@@ -192,7 +201,7 @@ markdown; `@xterm/xterm` powers the in-console terminal.
 | **AI assistant** | DeepSeek-backed tool-calling ops agent (inspect + human-approved act, incl. `run_command`); available in the console and over MCP. |
 | **Self-hosted wiki** | Markdown content in Postgres, rendered in-app; public (anonymous) + internal (operator-gated) tiers; in-browser editing with version history. |
 | **Member-facing** | Public landing, Looking Glass, status/incidents page, PeeringDB-backed peering info + application intake. |
-| **Webmail** | `ncn-mail` on pop-03 backing `mail.example.com` (IMAP/SMTP loopback to dovecot/postfix, DKIM via rspamd). |
+| **Webmail** | `ncn-mail` backing `mail.example.com` (IMAP/SMTP loopback to dovecot/postfix, DKIM via rspamd). |
 | **Audit** | Every privileged action is recorded; audit log is rsynced offsite on a timer. |
 
 ---
@@ -249,14 +258,14 @@ bash core-console/deploy/deploy.sh frontend    # i18n lint + type-check + vite b
   `deploy.sh rollback`.
 - `ncn-api` is socket-activated (`ncn-api.socket` + `ncn-api.service`), so the
   swap is zero-downtime.
-- A daily state DR snapshot (local + offsite pop-04) and an audit-log offsite
+- A daily state DR snapshot (local + an offsite host) and an audit-log offsite
   rsync run on systemd timers (`deploy/ncn-state-backup.*`, `deploy/ncn-audit-rsync.*`).
 
 ---
 
 ## Configuration
 
-- Runtime config and secrets live under `/etc/ncn-core-console/` on ctrl-01
+- Runtime config and secrets live under `/etc/ncn-core-console/` on the control node
   (e.g. `session.key`, `oauth.env`, the fleet SSH key). See
   `core-console/deploy/oauth.env.example`.
 - nginx vhosts: `core-console/deploy/nginx-ncn-core-console.conf` (console /
@@ -280,7 +289,7 @@ hosts; `*.example` files document the expected shape.
 - **One executor:** all fleet writes go through `ncn-api`. The MCP server, the
   bot, and the CLIs are clients — they cannot touch the fleet directly. Write /
   command tools require an **admin** operator and are **audited**.
-- **Fleet access** uses a dedicated SSH key on ctrl-01; remote command execution
+- **Fleet access** uses a dedicated SSH key on the control node; remote command execution
   is human-approved through the agent flow.
 - **Content safety:** wiki markdown is sanitized with DOMPurify before render;
   the public wiki API server-side-enforces `is_public` so internal pages never
