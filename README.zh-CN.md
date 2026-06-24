@@ -14,7 +14,7 @@
 
 **快速开始:** [`core-console/QUICKSTART.md`](core-console/QUICKSTART.md) 覆盖四种
 入口 —— 本地开发、一键部署、全新主机/灾备引导、Docker Compose。**许可证:**
-[MIT](LICENSE) · **贡献指南:** [`CONTRIBUTING.md`](CONTRIBUTING.md) ·
+[Apache 2.0](LICENSE) · **贡献指南:** [`CONTRIBUTING.md`](CONTRIBUTING.md) ·
 **安全:** [`SECURITY.md`](SECURITY.md)。
 
 > 代码、注释与提交信息均为英文。面向成员的文档(Wiki)以简体中文为主。

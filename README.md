@@ -16,7 +16,7 @@ points at no real network.
 
 **Get started:** [`core-console/QUICKSTART.md`](core-console/QUICKSTART.md) covers
 the four entry points — local dev, one-command deploy, fresh-host/DR bootstrap,
-and Docker Compose. **License:** [MIT](LICENSE) · **Contributing:**
+and Docker Compose. **License:** [Apache 2.0](LICENSE) · **Contributing:**
 [`CONTRIBUTING.md`](CONTRIBUTING.md) · **Security:** [`SECURITY.md`](SECURITY.md).
 
 > Code, comments and commit messages are English. Member-facing documentation
