@@ -1,23 +1,25 @@
-# 状态与事件
+# Status and Incidents
 
-## 实时状态
+> **English** · [简体中文](status.zh-CN.md)
 
-各 PoP 的在线状态与可达性由我们的 uptime 跟踪持续监测。anycast 的特性决定了：**单个 PoP 异常通常不影响整体可用性**——流量会自动改走次近的健康 PoP。
+## Real-time status
 
-## 事件 (Incidents)
+The online status and reachability of each PoP are continuously monitored by the uptime tracker. Because the network uses anycast, the failure of a single PoP generally does not affect overall availability: traffic is automatically rerouted to the next-nearest healthy PoP.
 
-计划内维护与故障会以 incident 形式发布，包含影响范围、时间线与处置进展。
+## Incidents
 
-## 报障
+Planned maintenance and faults are published as incidents, including the affected scope, a timeline, and remediation progress.
 
-遇到疑似网络问题时，请提供：
+## Reporting a problem
 
-- 你的来源地区 / ASN；
-- 目标前缀或地址；
-- 从你侧的 traceroute（v6 优先）；
-- 以及（如果可能）一次 [Looking Glass](looking-glass.md) 查询结果。
+When reporting a suspected network issue, include the following information:
 
-这些信息能让我们快速判断是 peering、择路还是源站层面的问题。
+- The source region / ASN.
+- The destination prefix or address.
+- A traceroute from the reporting side (IPv6 preferred).
+- Where possible, the result of a [Looking Glass](looking-glass.md) query.
 
-!!! info "联系"
-    紧急网络问题请通过 PeeringDB 上 AS64500 的 NOC 联系方式上报。
+This information helps determine whether the issue is at the peering, routing, or origin layer.
+
+!!! info "Contact"
+    Report urgent network issues through the NOC contact details for AS64500 listed on PeeringDB.

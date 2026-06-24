@@ -1,40 +1,42 @@
-# 网络
+# Network
 
-## 自治系统
+> **English** · [简体中文](network.zh-CN.md)
+
+## Autonomous System
 
 | | |
 |---|---|
 | **ASN** | AS64500 |
-| **协议** | 原生 IPv6 + IPv4 |
-| **类型** | 多 PoP anycast |
-| **PeeringDB** | 搜索 AS64500 |
+| **Protocols** | Native IPv6 and IPv4 |
+| **Topology** | Multi-PoP anycast |
+| **PeeringDB** | Search for AS64500 |
 
-## PoP 分布
+## PoP Distribution
 
-我们在多个地区部署 PoP（接入点），每个 PoP 都宣告同一段 anycast 地址。当前覆盖（持续扩展中）：
+Points of Presence (PoPs) are deployed across multiple regions. Each PoP announces the same anycast prefix. The current coverage is listed below and may change over time:
 
-| 区域 | 代号 | 示例节点 |
+| Region | Code | Example node |
 |---|---|---|
-| 东京 Region A | `tyo` | ctrl-01 … |
-| 香港 Region C | `hkg` | pop-03 … |
-| 法兰克福 Region B | `fra` | pop-05 |
-| 新加坡 Region D | `sin` | pop-06 |
-| 台北 Region E | `tpe` | pop-08 |
+| Region A | `tyo` | ctrl-01 … |
+| Region C | `hkg` | pop-03 … |
+| Region B | `fra` | pop-05 |
+| Region D | `sin` | pop-06 |
+| Region E | `tpe` | pop-08 |
 
-实时节点与状态请用 [Looking Glass](looking-glass.md) 查询，或看 [状态页](status.md)。
+For the live list of nodes and their status, use the [Looking Glass](looking-glass.md) or the [status page](status.md).
 
-## anycast 是怎么工作的
+## How Anycast Works
 
-1. 每个 PoP 通过 BGP 向上游/IXP 宣告**相同的前缀**。
-2. 互联网上的路由器各自选择**到该前缀 AS 路径最短**的那条。
-3. 于是不同地区的用户被**就近**送达不同 PoP。
-4. 某个 PoP 故障并撤回宣告时，流量在 BGP 收敛后**自动改走次近的 PoP**——对用户基本无感。
+1. Each PoP announces the **same prefix** over BGP to its upstreams and IXPs.
+2. Routers on the internet each select the route with the **shortest AS path** to that prefix.
+3. As a result, users in different regions are directed to the **nearest** PoP.
+4. When a PoP fails and withdraws its announcement, traffic shifts to the **next-nearest** PoP after BGP convergence, with minimal disruption to users.
 
-!!! tip "为什么延迟低"
-    因为你的流量不必绕到地球另一端的某台固定服务器——它在离你最近的 PoP 就被接住了。
+!!! note "Latency"
+    Traffic terminates at the nearest PoP rather than being routed to a single fixed server in another region.
 
-## 健壮性
+## Resilience
 
-- **就近 + 冗余**：单 PoP 下线由 anycast 自动绕开。
-- **健康撤回**：PoP 不健康时会从 anycast 主动撤回宣告，避免把流量吸进无法服务的节点。
-- **多上游**：每个 PoP 接多个上游/IXP。
+- **Proximity and redundancy**: The loss of a single PoP is routed around automatically by anycast.
+- **Health-based withdrawal**: An unhealthy PoP withdraws its anycast announcement, preventing traffic from being directed to a node that cannot serve it.
+- **Multiple upstreams**: Each PoP connects to multiple upstreams and IXPs.

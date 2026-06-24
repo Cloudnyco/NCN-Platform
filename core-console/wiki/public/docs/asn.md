@@ -1,64 +1,65 @@
-# 自治系统（AS）与 ASN 基础
+# Autonomous Systems (AS) and ASN Basics
+> **English** · [简体中文](asn.zh-CN.md)
 
-面向初次接触网络互联概念的读者，介绍自治系统与自治系统号的基本知识。本网络（AS64500）的具体情况见 [网络](network.md)。
+This document introduces the basic concepts of Autonomous Systems and Autonomous System Numbers for readers new to network interconnection. Details specific to this network (AS64500) are described in [Network](network.md).
 
 ---
 
-## 什么是自治系统（AS）
+## What Is an Autonomous System (AS)
 
-互联网不是一张统一的大网，而是由成千上万个**各自独立管理的网络**互联而成。其中由同一个机构按统一路由策略管理的一组 IP 网络，称为一个**自治系统**（Autonomous System，AS）。
+The internet is not a single unified network. It is composed of many independently administered networks interconnected with one another. A group of IP networks managed by a single organization under a common routing policy is called an Autonomous System (AS).
 
-常见的自治系统包括：电信运营商（ISP）、云服务商、内容分发网络（CDN）、大学、大型企业等。
+Common examples of Autonomous Systems include internet service providers (ISPs), cloud providers, content delivery networks (CDNs), universities, and large enterprises.
 
-## 什么是 ASN
+## What Is an ASN
 
-每个自治系统拥有一个**全球唯一的编号**，称为自治系统号（Autonomous System Number，ASN）。它在域间路由协议 BGP 中用于标识「一条路由来自哪个网络」。
+Each Autonomous System holds a globally unique number called an Autonomous System Number (ASN). In the inter-domain routing protocol BGP, the ASN identifies which network a route originates from.
 
-ASN 通常写作 `AS` 加数字，例如本网络为 `AS64500`。
+An ASN is typically written as `AS` followed by a number, for example `AS64500`.
 
-## ASN 如何分配
+## How ASNs Are Allocated
 
-ASN 由 IANA 统一管理，逐级分配给五个**区域互联网注册管理机构**（RIR），再由 RIR 分配给各机构：
+ASNs are administered by IANA and allocated hierarchically to five Regional Internet Registries (RIRs), which in turn allocate them to individual organizations:
 
-| RIR | 覆盖区域 |
+| RIR | Coverage Region |
 |---|---|
-| RIPE NCC | 欧洲、中东、中亚 |
-| ARIN | 北美 |
-| APNIC | 亚太 |
-| LACNIC | 拉丁美洲与加勒比 |
-| AFRINIC | 非洲 |
+| RIPE NCC | Europe, the Middle East, and Central Asia |
+| ARIN | North America |
+| APNIC | Asia-Pacific |
+| LACNIC | Latin America and the Caribbean |
+| AFRINIC | Africa |
 
-## 16 位与 32 位 ASN
+## 16-bit and 32-bit ASNs
 
-- **16 位 ASN**：取值范围 `0`–`65535`，是早期的格式，资源已基本耗尽。
-- **32 位 ASN**：取值范围扩展至 `0`–`4294967295`，用于满足后续需求。`AS64500` 即为一个 32 位 ASN。
+- **16-bit ASN**: range `0`–`65535`. This is the original format, and its pool is largely exhausted.
+- **32-bit ASN**: range extended to `0`–`4294967295` to meet subsequent demand. `AS64500` is a 32-bit ASN.
 
-两种格式在 BGP 中可互通，路由器对其一视同仁。
+Both formats interoperate in BGP, and routers treat them equivalently.
 
-## 公有 ASN 与私有 ASN
+## Public and Private ASNs
 
-- **公有 ASN**：全球唯一，用于在公网上参与 BGP 路由。
-- **私有 ASN**：保留供机构内部使用，不在公网出现。范围为 `64512`–`65534`（16 位）与 `4200000000`–`4294967294`（32 位）。
+- **Public ASN**: globally unique and used to participate in BGP routing on the public internet.
+- **Private ASN**: reserved for internal use within an organization and not advertised on the public internet. The ranges are `64512`–`65534` (16-bit) and `4200000000`–`4294967294` (32-bit).
 
-## ASN 与 BGP 的关系
+## Relationship Between ASN and BGP
 
-BGP（边界网关协议）是自治系统之间交换路由信息的协议。每条 BGP 路由都带有一个 **AS_PATH**，即该路由依次经过的 ASN 序列。序列中最初宣告该前缀的自治系统称为 **origin AS**。
+BGP (Border Gateway Protocol) is the protocol by which Autonomous Systems exchange routing information. Each BGP route carries an **AS_PATH**, the sequence of ASNs the route has traversed in order. The Autonomous System that originally advertised the prefix is called the **origin AS**.
 
-接收方可据此判断路由的来源与路径，并结合 RPKI 等机制校验其合法性（参见本网络对 [互联](peering.md) 的要求）。
+A receiver can use this information to determine the origin and path of a route and to validate its legitimacy with mechanisms such as RPKI (see the [Peering](peering.md) requirements for this network).
 
-## 如何查询一个 ASN
+## How to Look Up an ASN
 
-公开工具可查询任意 ASN 的宣告前缀、互联关系与注册信息，例如：
+Public tools can query the prefixes advertised, peering relationships, and registration details of any ASN. Examples include:
 
-- **RIPEstat**（`stat.ripe.net`）
+- **RIPEstat** (`stat.ripe.net`)
 - **bgp.tools**
-- **PeeringDB**（`peeringdb.com`）—— 互联信息登记库
-- **whois** 查询
+- **PeeringDB** (`peeringdb.com`) — the interconnection registry
+- **whois** queries
 
 ---
 
-## 延伸阅读
+## Further Reading
 
-- [网络](network.md) —— 本网络（AS64500）的拓扑与 anycast 部署
-- [互联（Peering）](peering.md) —— 与本网络建立互联的方式
-- [Looking Glass](looking-glass.md) —— 实时查看本网络的路由
+- [Network](network.md) — topology and anycast deployment of this network (AS64500)
+- [Peering](peering.md) — how to establish peering with this network
+- [Looking Glass](looking-glass.md) — real-time view of this network's routing

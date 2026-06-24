@@ -1,18 +1,20 @@
 # Contributing
 
-Thanks for your interest! This is a self-hosted network-operations platform you
-can run for **your own** network. Contributions — bug fixes, features, docs,
-new integrations — are welcome.
+> **English** · [简体中文](CONTRIBUTING.zh-CN.md)
+
+This repository contains a self-hosted network-operations platform intended to be
+run against an operator's own network. Contributions are accepted, including bug
+fixes, features, documentation, and new integrations.
 
 ## Project layout
 
-| Path | What |
+| Path | Description |
 |---|---|
-| `core-console/` | Operations console: Vue 3 SPA + Go API (`ncn-api`) + per-PoP `agent`, `lb` (failover), `mcp`. The bulk of the platform. |
-| `webmail/` | Self-hosted webmail (Go + Vue) fronting Postfix/Dovecot. |
-| `cli/` | `ncn-login` (SSH-signed login) and `ncn-debug` (read-only ops CLI). |
-| `scripts/` | Backup/restore, PITR, per-PoP provisioning helpers. |
-| `deploy-all.sh` | Top-level orchestrator (webmail → console). |
+| `core-console/` | Operations console: Vue 3 SPA, Go API (`ncn-api`), and per-PoP `agent`, `lb` (failover), and `mcp`. Comprises the majority of the platform. |
+| `webmail/` | Self-hosted webmail (Go and Vue) fronting Postfix/Dovecot. |
+| `cli/` | `ncn-login` (SSH-signed login) and `ncn-debug` (read-only operations CLI). |
+| `scripts/` | Backup/restore, PITR, and per-PoP provisioning helpers. |
+| `deploy-all.sh` | Top-level orchestrator (webmail, then console). |
 
 ## Local development
 
@@ -23,27 +25,32 @@ cd core-console && scripts/dev.sh        # → http://localhost:5173
 docker compose -f core-console/deploy/docker/docker-compose.yml up --build  # → :8080
 ```
 
-See `core-console/QUICKSTART.md` for all four entry points (dev / deploy /
-bootstrap / docker) and `DEPLOYMENT.md` for a from-scratch production install.
+Refer to `core-console/QUICKSTART.md` for the four entry points (dev / deploy /
+bootstrap / docker) and to `DEPLOYMENT.md` for a from-scratch production install.
 
 ## Configuration
 
-Everything operator-specific is configured via environment variables (prefix
-`NCN_*`) and runtime files — see `.env.example`. The codebase ships with
-**placeholder** values (`example.com`, `AS64500`, RFC5737/RFC3849 addresses,
-`ctrl-01`/`pop-0N` node names). Replace them with your own via env / the node
-registry; nothing in the repo points at a real network.
+All operator-specific values are configured via environment variables (prefix
+`NCN_*`) and runtime files; see `.env.example`. The codebase ships with
+placeholder values (`example.com`, `AS64500`, RFC5737/RFC3849 addresses,
+`ctrl-01`/`pop-0N` node names). These must be replaced with operator-specific
+values via environment variables or the node registry. No value in the repository
+references a real network.
 
 ## Conventions
 
-- **Backend** (Go): `cd <module> && go vet ./... && go test ./...` before a PR.
-  Keep new operator-specific values behind `getenvDefault("NCN_...", "<placeholder>")`.
-- **Frontend** (Vue): `npm run lint:i18n && npm run typecheck && npm run build`.
-  All three locales (en / zh-CN / zh-TW) must stay key-aligned (`lint:i18n` enforces it).
-- Commits: conventional-ish (`feat(console): …`, `fix(...)`, `docs(...)`).
-- Anything that touches a production router/host must be confirm-gated + reversible.
+- Backend (Go): run `cd <module> && go vet ./... && go test ./...` before opening
+  a PR. New operator-specific values must be placed behind
+  `getenvDefault("NCN_...", "<placeholder>")`.
+- Frontend (Vue): run `npm run lint:i18n && npm run typecheck && npm run build`.
+  All three locales (en / zh-CN / zh-TW) must remain key-aligned; `lint:i18n`
+  enforces this.
+- Commits follow a conventional-style format (`feat(console): …`, `fix(...)`,
+  `docs(...)`).
+- Any change that affects a production router or host must be confirmation-gated
+  and reversible.
 
-## Reporting issues / security
+## Reporting issues and security
 
-Functional bugs → GitHub issues. **Security issues → see `SECURITY.md`** (do not
-open a public issue for vulnerabilities).
+Functional bugs should be reported via GitHub issues. Security issues are
+described in `SECURITY.md`; do not open a public issue for vulnerabilities.

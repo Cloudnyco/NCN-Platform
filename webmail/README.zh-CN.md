@@ -1,10 +1,10 @@
 # Webmail
 
-> **English** · [简体中文](README.zh-CN.md)
+> [English](README.md) · **简体中文**
 
-A standalone webmail application for `mail.example.com`. The frontend and
-backend both run on the mail node (`pop-03`) alongside the mail server. The
-application has no dependency on the control plane or a separate deploy host.
+面向 `mail.example.com` 的独立 Web 邮件应用。前端与后端均运行于邮件节点
+（`pop-03`），与邮件服务器位于同一主机。该应用不依赖控制平面，也不依赖独立的
+部署主机。
 
 ```
 pop-03
@@ -18,7 +18,7 @@ pop-03
 └── rspamd                                   (DKIM signs outbound)
 ```
 
-## Layout
+## 目录结构
 
 ```
 webmail/
@@ -38,7 +38,7 @@ webmail/
 └── README.md
 ```
 
-## Develop
+## 开发
 
 ```bash
 # frontend
@@ -51,13 +51,12 @@ cd backend
 go run .             # listens on 127.0.0.1:9000
 ```
 
-## Deploy
+## 部署
 
-Deployment routes through a build host that holds the fleet SSH key, which is
-the canonical path when the workstation has no direct SSH access to the
-`debian` user on `pop-03`.
+部署经由持有 fleet SSH 密钥的构建主机进行；当工作站无法直接以 `debian` 用户
+SSH 访问 `pop-03` 时，这是规范的部署路径。
 
-### Backend (Go)
+### 后端（Go）
 
 ```bash
 # 1. sync source to the build host (where Go is installed)
@@ -81,7 +80,7 @@ ssh root@build-host "
 "
 ```
 
-### Frontend (Vue)
+### 前端（Vue）
 
 ```bash
 cd webmail
@@ -101,7 +100,7 @@ ssh root@build-host "
 "
 ```
 
-### First-time setup
+### 首次安装
 
 ```bash
 # nginx vhost
@@ -118,29 +117,28 @@ sudo mkdir -p /var/www/webmail
 sudo chown www-data:www-data /var/www/webmail
 ```
 
-## Security model
+## 安全模型
 
-- `ncn_mail_session` cookie: HMAC-SHA256 signed, 8h TTL, HttpOnly + Secure +
-  SameSite=Lax. Key derived from `/etc/ncn-mail/session.key` via HKDF with
-  domain `ncn.mail.session.v1`.
-- Stashed mailbox passwords: AES-256-GCM, key from the same master via HKDF
-  domain `ncn.mail.creds.v1` (domain-separated from the session key).
-- Login: requires a successful IMAP LOGIN to the local dovecot. The
-  application has no separate identity store — possession of a valid
-  mailbox password is the proof of identity.
-- HTML mail render: sandboxed `<iframe sandbox="">` only. CSP
-  `default-src 'self'` blocks any other XSS path through the SPA shell.
-- ncn-mail systemd hardening: `NoNewPrivileges`, `ProtectSystem=strict`,
-  `ProtectHome`, `PrivateTmp`, `RestrictAddressFamilies`, narrow
-  `SystemCallFilter`.
+- `ncn_mail_session` cookie：使用 HMAC-SHA256 签名，TTL 为 8 小时，
+  HttpOnly + Secure + SameSite=Lax。密钥经 HKDF（域 `ncn.mail.session.v1`）
+  从 `/etc/ncn-mail/session.key` 派生。
+- 暂存的邮箱密码：AES-256-GCM，密钥经 HKDF（域 `ncn.mail.creds.v1`）从同一
+  主密钥派生（与会话密钥按域分离）。
+- 登录：要求对本地 dovecot 成功执行 IMAP LOGIN。该应用没有独立的身份存储——
+  持有有效的邮箱密码即为身份证明。
+- HTML 邮件渲染：仅在沙箱化的 `<iframe sandbox="">` 中进行。CSP
+  `default-src 'self'` 阻断经由 SPA 外壳的其他 XSS 路径。
+- ncn-mail systemd 加固：`NoNewPrivileges`、`ProtectSystem=strict`、
+  `ProtectHome`、`PrivateTmp`、`RestrictAddressFamilies`、收窄的
+  `SystemCallFilter`。
 
-## Not yet implemented
+## 尚未实现
 
-- Attachment upload and download (metadata is shown; payloads are stubs)
+- 附件上传与下载（仅显示元数据；负载为占位实现）
 - IMAP SEARCH / THREAD
-- Move-between-folders beyond Trash
-- IDLE-driven push notifications (currently user-triggered refresh only)
-- HTML compose / rich text
-- Drafts autosave
+- 除回收站外的跨文件夹移动
+- 基于 IDLE 的推送通知（当前仅支持用户触发的刷新）
+- HTML 撰写 / 富文本
+- 草稿自动保存
 
-Each item is a self-contained follow-up task.
+每一项均为独立的后续任务。

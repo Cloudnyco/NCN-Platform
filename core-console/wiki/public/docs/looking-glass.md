@@ -1,22 +1,24 @@
 # Looking Glass
 
-Looking Glass 让你从**我们的视角**查看路由——排查可达性、确认我们是否收到/宣告了某个前缀、看 AS 路径。
+> **English** · [简体中文](looking-glass.zh-CN.md)
 
-## 能做什么
+The Looking Glass provides a read-only view of routing state from the network's perspective. It is used to investigate reachability, confirm whether a prefix is being received or advertised, and inspect AS paths.
 
-- **查路由**：某个前缀在我们这里的最优路径、下一跳、AS path。
-- **看 BGP 邻居**：会话状态。
-- **基础探测**：从某个 PoP 出发的可达性。
+## Capabilities
 
-## 怎么用
+- **Route lookup**: the best path, next hop, and AS path for a given prefix.
+- **BGP neighbor status**: the state of BGP sessions.
+- **Basic reachability probes**: reachability tests originating from a selected PoP.
 
-1. 打开站点首页的 **Looking Glass** 入口。
-2. 选择一个 **PoP**（决定从哪个地区的视角看）。
-3. 输入前缀或地址，执行查询。
+## Usage
 
-!!! tip "排查 anycast"
-    如果你在某地区访问异常，用离你最近的 PoP 视角查一下该前缀的路径，能快速判断是 peering、择路还是源站问题。
+1. Open the **Looking Glass** entry from the site home page.
+2. Select a **PoP**, which determines the regional vantage point used for the query.
+3. Enter a prefix or address and run the query.
 
-## 只读
+!!! tip "Investigating anycast"
+    When access appears abnormal from a particular region, query the prefix path using the PoP closest to that region. This helps distinguish between peering, path-selection, and origin-server issues.
 
-Looking Glass 是**只读**的——它只展示路由信息，不会改动任何配置。
+## Read-only
+
+The Looking Glass is read-only. It displays routing information only and does not modify any configuration.

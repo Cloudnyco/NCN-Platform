@@ -1,8 +1,10 @@
 # PITR scripts
 
-Hand-deployed artifacts for point-in-time recovery. See `docs/PITR-RESTORE.md`
-for the full runbook. These are **not** shipped by `deploy/deploy.sh` — they're
-installed manually on the nodes below.
+> **English** · [简体中文](README.zh-CN.md)
+
+Hand-deployed artifacts for point-in-time recovery (PITR). The full runbook is
+documented in `docs/PITR-RESTORE.md`. These artifacts are not shipped by
+`deploy/deploy.sh`; they are installed manually on the nodes listed below.
 
 | File | Host | Installed path |
 |---|---|---|
@@ -13,14 +15,15 @@ installed manually on the nodes below.
 | `ncn-pitr-basebackup.{service,timer}` | pop-03 | `/etc/systemd/system/` |
 | `ncn-pitr-drill.sh` | pop-03 | run ad-hoc to verify restorability |
 
-**Primary-side PG settings** (via `ALTER SYSTEM`, needs a restart for
-`archive_mode`):
+**Primary-side PostgreSQL settings** (applied via `ALTER SYSTEM`; `archive_mode`
+requires a restart to take effect):
 ```
 archive_mode = on
 archive_command = '/usr/local/bin/ncn-wal-archive %p %f'
 archive_timeout = 300
 ```
 
-**Archive key**: postgres@ctrl-01 has a dedicated `~/.ssh/id_ed25519`; its pubkey
-is pinned on pop-03 in `root/.ssh/authorized_keys` as
+**Archive key**: the `postgres` account on ctrl-01 holds a dedicated
+`~/.ssh/id_ed25519`. Its public key is pinned on pop-03 in
+`root/.ssh/authorized_keys` as
 `command="/usr/local/bin/ncn-wal-recv",restrict <pubkey>`.

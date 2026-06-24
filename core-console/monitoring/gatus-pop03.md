@@ -1,29 +1,39 @@
-# Gatus uptime monitoring on pop-03 (deployed)
+# Gatus uptime monitoring on pop-0N (deployed)
 
-正经 uptime tracker(config-as-code),替自研 bot 接管节点 up/down + 公网服务探测。
-(替换了早期短暂试过的 Uptime Kuma —— Kuma 2.x 安装链路较脆、需交互建库/管理员;Gatus 单二进制 + YAML 更可靠、可完全自动化。)
+> **English** · [简体中文](gatus-pop03.zh-CN.md)
 
-## 部署形态
-- **主机**:pop-03(`198.51.100.3`)。原生二进制(**非 Docker** —— pop-03 是 BGP 路由器,避免 Docker 改 iptables/ip_forward)。
-- **二进制**:Gatus v5.36.0。Gatus 不发布预编译二进制,故在 **tyo 上 `go install github.com/TwiN/gatus/v5@v5.36.0`** 编出 linux-amd64,scp 到 pop-03 `/usr/local/bin/gatus`。
-- **配置**:`/etc/gatus/config.yaml`(= 仓库 `monitoring/gatus-config.yaml`,版本化)。data sqlite 在 `/var/mail/vhosts/monitoring/gatus/`(40G sdb)。
-- **服务**:systemd `gatus.service`,绑 **127.0.0.1:8080**(外部走 SSH 隧道)。Telegram 密钥经 `EnvironmentFile=/etc/gatus/gatus.env`(`TG_BOT_TOKEN`/`TG_CHAT_ID`,取自 `tg.env`;配置里用 `${...}` 占位,不入库)。
-- **监控(13)**:5 公网 HTTP(site/health/status/LG/admin,`[STATUS]==200`)+ 8 个 PoP **v6 anchor** ICMP(`2001:db8:R::N`,`[CONNECTED]==true`)。
-- **抗抖动**:`default-alert` = 连续 3 次失败才报 / 2 次成功才恢复 / `send-on-resolved`。
+Gatus provides a config-as-code uptime tracker that takes over node up/down detection and public-service probing previously handled by a self-built bot.
 
-## 为什么只探 v6 anchor、不探 v4 单播
-从 pop-03 这单一 mesh 内视角,PoP 间 **v4 跨运营商可达性不可靠**(如 pop-08 v4 从 HK 不通,但它 v6 明明在线)——会误报。v6 anchor 走 NCN 骨干,是可靠的逐 PoP 信号(与代码里 `ncnProbeV6` 一致)。公网 v4 可达性留给**外部多地 SaaS 层**(见 `uptime-targets.md` 第一节)。
+An earlier evaluation of Uptime Kuma was discontinued: Kuma 2.x has a fragile installation path and requires interactive database/admin setup. Gatus ships as a single binary driven by YAML, which is more reliable and can be fully automated.
 
-## 访问
-- **公网(推荐)**:https://monitor.example.com —— 经 **Cloudflare Tunnel**(pop-03 上 `cloudflared-gatus.service`,出站连接,**不开任何入站端口**)→ Gatus :8080。由 **Cloudflare Access** 鉴权(Zero Trust org `your-org`,策略 "NCN operators" 仅放行 admin@example.com,邮箱 OTP)。
-  - tunnel 名 `ncn-gatus-pop03`(id `ce17e9d0-…`),连接 token 在 pop-03 `/etc/cloudflared/tunnel.env`(0600)。
-  - DNS:`monitor` CNAME → `<tunnel-id>.cfargotunnel.com`(proxied)。
-- **应急**:`ssh -L 8080:127.0.0.1:8080 root@198.51.100.3` → http://localhost:8080。
+## Deployment
 
-## 改配置
+- **Host**: pop-0N (`198.51.100.3`). Runs as a native binary rather than under Docker, because the node also acts as a BGP router and Docker would modify `iptables`/`ip_forward`.
+- **Binary**: Gatus v5.36.0. Gatus does not publish precompiled binaries, so a linux-amd64 binary is built on a build host with `go install github.com/TwiN/gatus/v5@v5.36.0` and copied to pop-0N at `/usr/local/bin/gatus`.
+- **Configuration**: `/etc/gatus/config.yaml` (tracked in the repository as `monitoring/gatus-config.yaml`). The SQLite data store resides under `/var/lib/monitoring/gatus/`.
+- **Service**: systemd unit `gatus.service`, bound to `127.0.0.1:8080` (external access is via an SSH tunnel). Telegram credentials are supplied through `EnvironmentFile=/etc/gatus/gatus.env` (`TG_BOT_TOKEN` / `TG_CHAT_ID`). The configuration references these with `${...}` placeholders so secrets are not committed.
+- **Monitored endpoints**: public HTTP endpoints (site/health/status/looking-glass/admin, asserting `[STATUS]==200`) plus per-PoP IPv6 anchor ICMP checks (`2001:db8:R::N`, asserting `[CONNECTED]==true`).
+- **Flap suppression**: `default-alert` requires 3 consecutive failures before alerting and 2 consecutive successes before resolving, with `send-on-resolved` enabled.
+
+## Why only IPv6 anchors are probed, not IPv4 unicast
+
+From the vantage point of a single node within one mesh, inter-PoP IPv4 cross-carrier reachability is unreliable (a PoP may be unreachable over IPv4 from one region while clearly online over IPv6), which produces false alerts. The IPv6 anchor traverses the backbone and provides a reliable per-PoP signal (consistent with the `ncnProbeV6` logic in the codebase). Public IPv4 reachability is delegated to an external multi-region SaaS layer (see the first section of `uptime-targets.md`).
+
+## Access
+
+- **Public (recommended)**: https://monitor.example.com, served through a Cloudflare Tunnel (`cloudflared-gatus.service` on pop-0N, an outbound connection that opens no inbound ports) to Gatus on port 8080. Authentication is enforced by Cloudflare Access (a Zero Trust organization with a policy that admits operators, e.g. `admin@example.com`, via email OTP).
+  - The tunnel connection token is stored on pop-0N at `/etc/cloudflared/tunnel.env` (mode `0600`).
+  - DNS: a `monitor` CNAME points to `<tunnel-id>.cfargotunnel.com` (proxied).
+- **Emergency**: `ssh -L 8080:127.0.0.1:8080 root@198.51.100.3`, then open http://localhost:8080.
+
+## Changing the configuration
+
 ```
-# 编辑仓库 monitoring/gatus-config.yaml → scp 到 pop-03 /etc/gatus/config.yaml → systemctl restart gatus
+# Edit monitoring/gatus-config.yaml in the repository
+# scp it to pop-0N at /etc/gatus/config.yaml
+# systemctl restart gatus
 ```
 
-## 后续
-自研 bot 的 node up/down(`node-unreachable`/`probe-down`)TG 推送已在 `alerts.go` 静音(Kuma/Gatus 接管);其余 crit(cpu/mem/disk、bgp-peer-down、bird-unreachable)保留。外部独立兜底层按 `uptime-targets.md` 第一节加(待办)。
+## Follow-up
+
+The self-built bot's node up/down Telegram notifications (`node-unreachable` / `probe-down`) are silenced in `alerts.go` once Gatus takes over. Other critical alerts (CPU/memory/disk, `bgp-peer-down`, `bird-unreachable`) are retained. An independent external fallback layer is to be added per the first section of `uptime-targets.md` (pending).

@@ -1,35 +1,42 @@
 # Security Policy
 
+> **English** · [简体中文](SECURITY.zh-CN.md)
+
 ## Reporting a vulnerability
 
-Please **do not** open a public issue for security vulnerabilities. Instead,
-email the maintainers (see the repository owner's profile) or use GitHub's
-**private vulnerability reporting** ("Report a vulnerability" under the Security
-tab). We aim to acknowledge within a few days.
+Do not open a public issue for security vulnerabilities. Report them by email to
+the maintainers (see the repository owner's profile) or through GitHub's
+private vulnerability reporting ("Report a vulnerability" under the Security
+tab). Acknowledgement is typically sent within a few days.
 
-When reporting, include: affected component, version/commit, reproduction steps,
-and impact.
+Reports should include: the affected component, version or commit, reproduction
+steps, and impact.
 
-## Running this safely
+## Operational guidance
 
-This platform controls real network infrastructure. If you deploy it:
+This platform controls network infrastructure. The following practices apply to
+any deployment:
 
-- **Secrets** live only in `/etc/<service>/` env files and runtime key files —
-  never in the repo. Keep `oauth.env`, `tg.env`, `fleet-key`, agent CA/keys,
-  `turnstile.secret`, recovery keys, and your `NCN_DATABASE_URL` password out of
+- Secrets reside only in `/etc/<service>/` env files and runtime key files, never
+  in the repository. Keep `oauth.env`, `tg.env`, `fleet-key`, agent CA/keys,
+  `turnstile.secret`, recovery keys, and the `NCN_DATABASE_URL` password out of
   version control (`.gitignore` already excludes `*.env`, `*.key`, `*.pem`, `*.age`).
-- **Never commit an encrypted secrets backup** to a repo that is (or may become)
-  public — even age-encrypted blobs should be treated as compromised once exposed.
-- The API is auth-gated; the public site/looking-glass paths are explicitly
-  separated from `/admin/*` (host separation in nginx + the router).
+- Encrypted secrets backups must not be committed to a repository that is, or may
+  become, public. An age-encrypted blob should be treated as compromised once exposed.
+- The API is authentication-gated. The public site and looking-glass paths are
+  separated from `/admin/*` (host separation in nginx and the router).
 - Production-touching actions (config rollback, mesh apply, DDoS mitigation,
-  failover) are **confirm-gated, audited, and reversible** by design — keep them so.
-- Per-PoP agents use mTLS-pinned HTTPS + HMAC; rotate keys with the helpers in
+  failover) are confirm-gated, audited, and reversible by design; this property
+  should be preserved.
+- Per-PoP agents use mTLS-pinned HTTPS with HMAC. Rotate keys with the helpers in
   `scripts/` if exposure is suspected.
 
 ## Sensitive-by-design modules
 
-`core-console/backend/{auth*,oauth,passkey,recover_bootstrap,audit}.go`,
-`lb/failover.sh`, `scripts/{backup,restore}-secrets.sh`, and anything under
-`scripts/pitr/` handle credentials or destructive operations — review changes
-there with extra care.
+The following handle credentials or destructive operations and warrant additional
+review for any change:
+
+- `core-console/backend/{auth*,oauth,passkey,recover_bootstrap,audit}.go`
+- `lb/failover.sh`
+- `scripts/{backup,restore}-secrets.sh`
+- anything under `scripts/pitr/`

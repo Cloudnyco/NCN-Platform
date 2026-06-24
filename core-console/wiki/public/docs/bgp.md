@@ -1,65 +1,66 @@
-# BGP 基础
+# BGP Basics
+> **English** · [简体中文](bgp.zh-CN.md)
 
-面向初次接触域间路由的读者，介绍边界网关协议（BGP）的基本概念。建议先阅读 [自治系统（AS）与 ASN 基础](asn.md)。
+This document introduces the basic concepts of the Border Gateway Protocol (BGP) for readers new to inter-domain routing. Reading [Autonomous Systems (AS) and ASN Basics](asn.md) first is recommended.
 
 ---
 
-## 什么是 BGP
+## What Is BGP
 
-BGP（Border Gateway Protocol，边界网关协议）是互联网的**域间路由协议**，负责在不同的[自治系统（AS）](asn.md)之间交换可达性信息，决定数据如何跨越多个网络抵达目的地。
+BGP (Border Gateway Protocol) is the inter-domain routing protocol of the Internet. It exchanges reachability information between different [autonomous systems (AS)](asn.md) and determines how data traverses multiple networks to reach its destination.
 
-## BGP 解决什么问题
+## The Problem BGP Solves
 
-每个自治系统只直接了解自己内部的网络。BGP 让相邻的自治系统互相告知「我能到达哪些 IP 前缀、经由什么路径」，这些信息在全网逐跳传递，最终使任意两点之间可达。
+Each autonomous system has direct knowledge only of its own internal networks. BGP allows adjacent autonomous systems to inform one another which IP prefixes they can reach and by what path. This information is propagated hop by hop across the network, eventually establishing reachability between arbitrary endpoints.
 
-## 前缀与路由通告
+## Prefixes and Route Announcements
 
-自治系统通过 BGP **通告**（announce）它所负责的 IP 前缀（例如 `2001:db8:50::/44`）。其他自治系统收到通告后，即知道应将发往这些地址的流量交给谁。
+An autonomous system uses BGP to announce the IP prefixes it is responsible for (for example, `2001:db8:50::/44`). Other autonomous systems that receive the announcement then know where to forward traffic destined for those addresses.
 
-一条 BGP 路由的核心信息是：**目的前缀** + **到达它的路径**。
+The core information of a BGP route is a destination prefix plus the path to reach it.
 
 ## AS_PATH
 
-每条 BGP 路由都带有一个 **AS_PATH**，记录它依次经过的 ASN 序列。它有两个主要作用：
+Every BGP route carries an AS_PATH, which records the sequence of ASNs it has traversed. It serves two main purposes:
 
-- **选路**：在多条可达路径中，AS_PATH 较短的通常更优。
-- **防环**：某个自治系统若在 AS_PATH 中看到自己的 ASN，即丢弃该路由，避免路由环路。
+- Path selection: among multiple reachable paths, a shorter AS_PATH is generally preferred.
+- Loop prevention: if an autonomous system sees its own ASN in the AS_PATH, it discards the route, avoiding routing loops.
 
-路径末端、最初通告该前缀的自治系统称为 **origin AS**。
+The autonomous system at the end of the path, which originally announced the prefix, is called the origin AS.
 
-## eBGP 与 iBGP
+## eBGP and iBGP
 
-| 类型 | 用途 |
+| Type | Purpose |
 |---|---|
-| eBGP（外部 BGP） | 不同自治系统之间交换路由 |
-| iBGP（内部 BGP） | 同一自治系统内部的路由器之间同步路由 |
+| eBGP (External BGP) | Exchanges routes between different autonomous systems |
+| iBGP (Internal BGP) | Synchronizes routes among routers within the same autonomous system |
 
-## 选路简述
+## Path Selection Overview
 
-BGP 的选路不只看「跳数」，而是依据一系列属性按固定优先级决策，常见的包括 Local Preference、AS_PATH 长度、MED 等。因此 BGP 的结果是**策略驱动**的，未必是物理上的最短路径。
+BGP path selection considers more than hop count. It decides according to a series of attributes evaluated in a fixed priority order, commonly including Local Preference, AS_PATH length, and MED. As a result, BGP outcomes are policy-driven and are not necessarily the physically shortest path.
 
-## 互联方式：transit 与 peering
+## Interconnection Models: Transit and Peering
 
-| 方式 | 说明 |
+| Model | Description |
 |---|---|
-| Transit（中转） | 向上游运营商付费，换取到达整个互联网的可达性 |
-| Peering（对等互联） | 两个网络直接交换各自及其客户的路由，通常互不付费，多在 IXP 进行 |
+| Transit | A paid relationship with an upstream provider that provides reachability to the entire Internet |
+| Peering | Two networks directly exchange their own routes and those of their customers, usually without payment, often at an IXP |
 
-## 常见相关概念
+## Related Concepts
 
-- **IXP（互联网交换中心）**：多个网络在同一物理设施集中互联的场所。
-- **全表（full table）**：一个自治系统从其连接收到的全部互联网路由条目。
-- **路由来源校验**：见下节。
+- IXP (Internet Exchange Point): a facility where multiple networks interconnect at a shared physical location.
+- Full table: the complete set of Internet routes an autonomous system receives from its connections.
+- Route origin validation: see the following section.
 
-## 安全：路由来源校验
+## Security: Route Origin Validation
 
-BGP 协议本身不验证一条通告的真伪，因此存在前缀误通告与路由劫持的风险。**RPKI** 通过签名的 ROA 声明「哪个自治系统有权通告哪个前缀」，路由器据此对收到的路由做**来源校验（ROV）**，将其判为 valid / invalid / unknown。本网络发布自己的 ROA，并对互联中收到的路由执行来源校验（参见对 [互联](peering.md) 的要求）。
+BGP itself does not verify the authenticity of an announcement, which creates a risk of prefix mis-origination and route hijacking. RPKI uses signed ROAs to declare which autonomous system is authorized to announce a given prefix. Routers use this information to perform Route Origin Validation (ROV) on received routes, classifying them as valid, invalid, or unknown. A network publishes its own ROAs and performs route origin validation on routes received over its interconnections (see the requirements for [Peering](peering.md)).
 
 ---
 
-## 延伸阅读
+## Further Reading
 
-- [自治系统（AS）与 ASN 基础](asn.md) —— BGP 中标识网络的编号
-- [网络](network.md) —— 本网络（AS64500）的拓扑与 anycast 部署
-- [互联（Peering）](peering.md) —— 与本网络建立互联的方式
-- [Looking Glass](looking-glass.md) —— 实时查看本网络的路由与 AS_PATH
+- [Autonomous Systems (AS) and ASN Basics](asn.md) — the numbers that identify networks in BGP
+- [Network](network.md) — the topology and anycast deployment of the network (AS64500)
+- [Peering](peering.md) — how to establish interconnection with the network
+- [Looking Glass](looking-glass.md) — view routes and AS_PATH in real time

@@ -1,33 +1,35 @@
-# 互联 (Peering)
+# Peering
 
-我们采取**开放 peering** 政策，欢迎在共同接入的 IXP 或通过 PNI 与 AS64500 互联。
+> **English** · [简体中文](peering.zh-CN.md)
 
-## 基本信息
+The network operates an open peering policy. Peering requests are accepted at commonly attended Internet Exchange Points (IXPs) or via Private Network Interconnect (PNI) with AS64500.
+
+## Basic information
 
 | | |
 |---|---|
 | **ASN** | AS64500 |
-| **Peering 政策** | Open |
-| **IPv6** | 必须支持（我们是 IPv6-first） |
-| **MD5** | 可选 |
-| **详情** | PeeringDB: AS64500 |
+| **Peering policy** | Open |
+| **IPv6** | Required (the network is IPv6-first) |
+| **MD5** | Optional |
+| **Details** | PeeringDB: AS64500 |
 
-## 前置要求
+## Prerequisites
 
-- 在 PeeringDB 维护你的 AS 记录（我们用它校验）。
-- 注册有效的 **RPKI ROA** / IRR 记录——我们做来源校验，未通过的宣告可能被拒。
-- 双方各自做合理的前缀过滤与 max-prefix 限制。
+- Maintain an accurate AS record in PeeringDB; it is used for validation.
+- Register valid **RPKI ROA** / IRR records. Origin validation is performed, and announcements that fail validation may be rejected.
+- Apply appropriate prefix filtering and a max-prefix limit on both sides.
 
-## 如何申请
+## How to apply
 
-1. 确认我们在同一个 IXP，或商定 PNI。
-2. 通过**互联申请页**提交你的 ASN、IXP、对接 IP 与联系方式。
-3. 我们核对 PeeringDB / RPKI 后配置会话并通知你。
+1. Confirm presence at a common IXP, or agree on a PNI.
+2. Submit the ASN, IXP, peering IP addresses, and contact details through the peering application page.
+3. The details are verified against PeeringDB and RPKI, after which the session is configured and the applicant is notified.
 
 !!! note "RPKI"
-    我们发布自己的 ROA 并对收到的宣告做来源有效性校验。请确保你的前缀有有效 ROA，避免被判为 invalid。
+    ROAs are published for the network's own prefixes, and origin validity is checked on received announcements. Prefixes should have valid ROAs to avoid being classified as invalid.
 
-## 我们会宣告什么
+## What is announced
 
-- 我们自己的 anycast 前缀（IPv6 + IPv4）。
-- 我们不会把从一个 peer 学到的路由再转卖给另一个 peer（非 transit）。
+- Anycast prefixes for the network (IPv6 and IPv4).
+- Routes learned from one peer are not re-advertised to another peer (no transit).

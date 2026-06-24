@@ -1,55 +1,57 @@
-# IGP 基础（内部网关协议）
+# IGP Fundamentals (Interior Gateway Protocols)
 
-面向初次接触路由协议的读者，介绍内部网关协议（IGP）的基本概念。IGP 与 [BGP](bgp.md) 相对：BGP 负责自治系统**之间**的路由，IGP 负责一个自治系统**内部**的路由。建议先阅读 [BGP 基础](bgp.md)。
+> **English** · [简体中文](igp.zh-CN.md)
 
----
-
-## IGP 与 EGP 的区别
-
-路由协议按作用范围分两类：
-
-| 类别 | 作用范围 | 代表协议 |
-|---|---|---|
-| EGP（外部网关协议） | 自治系统**之间** | BGP |
-| IGP（内部网关协议） | 单个自治系统**内部** | OSPF、IS-IS、RIP 等 |
-
-IGP 让一个自治系统内部的路由器互相了解如何到达本系统内的各个网段；BGP 则在自治系统之间交换前缀。两者分工不同、通常同时存在。
-
-## 常见的 IGP
-
-| 协议 | 类型 | 说明 |
-|---|---|---|
-| OSPF | 链路状态 | 应用广泛，支持 IPv4/IPv6（OSPFv3），按区域（area）划分以利扩展 |
-| IS-IS | 链路状态 | 常见于大型运营商骨干，协议无关、易扩展 |
-| RIP | 距离矢量 | 早期协议，配置简单但收敛慢、规模受限 |
-| EIGRP | 距离矢量（高级） | Cisco 体系内常见 |
-
-## 链路状态 vs 距离矢量
-
-IGP 主要分两种工作方式：
-
-- **链路状态**（OSPF、IS-IS）：每台路由器都掌握全网拓扑，各自用最短路径算法（如 Dijkstra）独立计算到各目的地的路径。收敛快、扩展性好。
-- **距离矢量**（RIP）：路由器只把「我到某网段需要几跳」告诉直接邻居，信息逐跳传播。实现简单，但收敛较慢、需额外机制防环。
-
-## IGP 与 BGP 如何协作
-
-在一个同时运行 IGP 和 BGP 的自治系统里，二者各司其职：
-
-- **IGP** 提供系统内部的可达性，包括到达 BGP 邻居与路由**下一跳**的内部路径。
-- **BGP** 负责系统之间的前缀，并依赖 IGP 解析这些路由的下一跳实际怎么走。
-
-简而言之：IGP 管「域内怎么走」，BGP 管「域间有哪些前缀」。
-
-## 本网络的内部路由
-
-NCN 的各 PoP 通过 **IPv6 骨干网络**（`2001:db8:50::/44`）互联，内部路由的分发使用 **iBGP**（内部 BGP），而非传统 IGP。
-
-在这种由隧道构成、规模有限的全连接骨干上，iBGP（配合直连/静态路由解析下一跳）已足以满足内部可达性，因此未额外运行 OSPF 或 IS-IS。对外前缀仍由 eBGP 向上游与对等方宣告（见 [BGP 基础](bgp.md)）。
+This document introduces the basic concepts of Interior Gateway Protocols (IGP). IGP contrasts with [BGP](bgp.md): BGP handles routing *between* autonomous systems, while IGP handles routing *within* a single autonomous system. Reading [BGP Fundamentals](bgp.md) first is recommended.
 
 ---
 
-## 延伸阅读
+## IGP vs. EGP
 
-- [BGP 基础](bgp.md) —— 自治系统之间的路由协议
-- [自治系统（AS）与 ASN 基础](asn.md) —— 路由协议中标识网络的编号
-- [网络](network.md) —— 本网络（AS64500）的拓扑与 anycast 部署
+Routing protocols are classified by scope into two categories:
+
+| Category | Scope | Representative protocols |
+|---|---|---|
+| EGP (Exterior Gateway Protocol) | *Between* autonomous systems | BGP |
+| IGP (Interior Gateway Protocol) | *Within* a single autonomous system | OSPF, IS-IS, RIP, etc. |
+
+IGP allows routers within an autonomous system to learn how to reach the various networks inside that system; BGP exchanges prefixes between autonomous systems. The two serve different functions and typically operate concurrently.
+
+## Common IGPs
+
+| Protocol | Type | Notes |
+|---|---|---|
+| OSPF | Link-state | Widely deployed; supports IPv4/IPv6 (OSPFv3); divided into areas for scalability |
+| IS-IS | Link-state | Common in large carrier backbones; protocol-independent and extensible |
+| RIP | Distance-vector | An early protocol; simple to configure but slow to converge and limited in scale |
+| EIGRP | Distance-vector (advanced) | Common within Cisco environments |
+
+## Link-State vs. Distance-Vector
+
+IGPs operate in two principal ways:
+
+- **Link-state** (OSPF, IS-IS): Each router maintains the full network topology and independently computes the shortest path to each destination using an algorithm such as Dijkstra's. Convergence is fast and scalability is good.
+- **Distance-vector** (RIP): A router advertises only "how many hops to a given network" to its directly connected neighbors, and information propagates hop by hop. Implementation is simple, but convergence is slower and additional mechanisms are required to prevent loops.
+
+## How IGP and BGP Cooperate
+
+In an autonomous system running both IGP and BGP, each protocol performs a distinct role:
+
+- **IGP** provides internal reachability, including the internal paths to BGP neighbors and to route *next hops*.
+- **BGP** carries prefixes between autonomous systems and relies on the IGP to resolve how those routes' next hops are actually reached.
+
+In short: IGP determines how to route within the domain, and BGP determines which prefixes exist between domains.
+
+## Internal Routing in This Network
+
+In this network, the PoPs are interconnected over an **IPv6 backbone** (`2001:db8::/44`), and internal routes are distributed using **iBGP** (internal BGP) rather than a traditional IGP.
+
+On a tunnel-based, limited-scale, full-mesh backbone of this kind, iBGP (with directly connected or static routes resolving next hops) is sufficient for internal reachability, so OSPF or IS-IS is not run additionally. External prefixes are still announced to upstreams and peers via eBGP (see [BGP Fundamentals](bgp.md)).
+
+---
+
+## Further Reading
+
+- [BGP Fundamentals](bgp.md) — the routing protocol between autonomous systems
+- [Autonomous Systems (AS) and ASN Fundamentals](asn.md) — the numbers identifying networks in routing protocols
+- [Network](network.md) — the topology and anycast deployment of this network (AS64500)
