@@ -170,6 +170,14 @@ export default {
     privacy: 'Privacy',
     terms: 'Terms'
   },
+  cli_login: {
+    working: 'Authorizing ncn-login…',
+    done: 'Logged in',
+    close: 'Token sent back to your terminal — you can close this tab.',
+    error: 'Login failed',
+    bad_params: 'Missing CLI parameters — re-run ncn-login.',
+    loopback_fail: 'Could not reach ncn-login (did it time out?). Re-run it.',
+  },
   login: {
     title_console: 'CORE CONSOLE',
     operator_label: 'Operator',

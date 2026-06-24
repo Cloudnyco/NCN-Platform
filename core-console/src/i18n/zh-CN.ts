@@ -172,6 +172,14 @@ const messages: typeof en = {
     privacy: '隐私',
     terms: '条款'
   },
+  cli_login: {
+    working: '正在授权 ncn-login…',
+    done: '已登录',
+    close: '令牌已发回你的终端 —— 可以关闭此页。',
+    error: '登录失败',
+    bad_params: '缺少 CLI 参数 —— 请重新运行 ncn-login。',
+    loopback_fail: '联系不到 ncn-login(可能已超时?),请重新运行它。',
+  },
   login: {
     title_console: '核心控制台',
     operator_label: '运维身份',

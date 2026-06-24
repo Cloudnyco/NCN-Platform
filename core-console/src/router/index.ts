@@ -21,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Sign In', public: true } satisfies NavMeta
   },
   {
+    path: '/cli-login',
+    name: 'cli-login',
+    component: () => import('@/views/CliLogin.vue'),
+    meta: { title: 'CLI Login', public: true } satisfies NavMeta
+  },
+  {
     path: '/lg',
     name: 'lg',
     component: () => import('@/views/LookingGlassPage.vue'),

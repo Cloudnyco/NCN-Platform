@@ -172,6 +172,14 @@ const messages: typeof en = {
     privacy: '隱私',
     terms: '條款'
   },
+  cli_login: {
+    working: '正在授權 ncn-login…',
+    done: '已登入',
+    close: '權杖已送回你的終端 —— 可以關閉此頁。',
+    error: '登入失敗',
+    bad_params: '缺少 CLI 參數 —— 請重新執行 ncn-login。',
+    loopback_fail: '聯繫不到 ncn-login(可能已逾時?),請重新執行它。',
+  },
   login: {
     title_console: '核心主控台',
     operator_label: '維運身份',

@@ -7,7 +7,7 @@ import ErrorBoundary from '@/components/ErrorBoundary.vue'
 
 const route = useRoute()
 
-const isLogin = computed(() => route.name === 'login')
+const isLogin = computed(() => route.name === 'login' || route.name === 'cli-login')
 const isAdmin = computed(() => route.path.startsWith('/admin'))
 </script>
 
